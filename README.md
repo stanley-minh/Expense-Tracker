@@ -1,98 +1,98 @@
-# Suivi de dépenses
+# Expense Tracker
 
-Application de suivi de dépenses personnelles : chaque utilisateur crée un
-compte, organise ses dépenses par catégories, et peut les consulter, créer,
-modifier ou supprimer (CRUD complet).
+A personal expense tracking application: each user creates an account,
+organizes their expenses into categories, and can view, create, edit or
+delete them (full CRUD).
 
-Ce projet est un monorepo : le backend et le frontend vivent dans le même
-dépôt, dans deux dossiers séparés.
+This project is a monorepo: the backend and frontend live in the same
+repository, in two separate folders.
 
-## Stack technique
+## Tech stack
 
-- **Backend** : Symfony 8 (PHP 8.5)
-- **API** : API Platform (API REST générée automatiquement à partir des entités Doctrine)
-- **Base de données** : MySQL 8.0
-- **Authentification** : JWT (LexikJWTAuthenticationBundle)
-- **CORS** : NelmioCorsBundle
-- **Frontend** (à venir) : React (Vite)
+- **Backend**: Symfony 8 (PHP 8.5)
+- **API**: API Platform (REST API generated automatically from Doctrine entities)
+- **Database**: MySQL 8.0
+- **Authentication**: JWT (LexikJWTAuthenticationBundle)
+- **CORS**: NelmioCorsBundle
+- **Frontend** (coming soon): React (Vite)
 
-## Structure du projet
+## Project structure
 
 ```
 suivi-depenses/
-├── backend/          Symfony + API Platform (API REST)
+├── backend/          Symfony + API Platform (REST API)
 │   ├── src/
 │   │   ├── Entity/       User.php, Category.php, Expense.php
-│   │   └── Repository/   dépôts Doctrine associés
+│   │   └── Repository/   associated Doctrine repositories
 │   ├── config/
 │   │   ├── packages/     api_platform.yaml, security.yaml, ...
 │   │   └── routes/       api_platform.yaml, lexik_jwt_authentication.yaml
-│   └── public/index.php  point d'entrée du serveur PHP
-└── frontend/         React (Vite) — à construire
+│   └── public/index.php  server entry point
+└── frontend/         React (Vite) — to be built
 ```
 
-## Modèle de données
+## Data model
 
-- **User** : compte utilisateur (email, mot de passe haché, rôles). Possède
-  plusieurs catégories et plusieurs dépenses.
-- **Category** : catégorie de dépense (ex. "Alimentation", "Transport").
-  Appartient à un utilisateur, regroupe plusieurs dépenses.
-- **Expense** : une dépense (montant, description, date). Appartient à une
-  catégorie et à un utilisateur.
+- **User**: user account (email, hashed password, roles). Has many
+  categories and many expenses.
+- **Category**: an expense category (e.g. "Food", "Transport"). Belongs to
+  a user, groups several expenses.
+- **Expense**: a single expense (amount, description, date). Belongs to a
+  category and a user.
 
-## Installation (backend)
+## Setup (backend)
 
-Prérequis : PHP 8.5, Composer, MySQL 8.
+Requirements: PHP 8.5, Composer, MySQL 8.
 
 ```bash
 cd backend
 composer install
 ```
 
-Configurer la base de données dans `backend/.env.local` (fichier non versionné) :
+Configure the database in `backend/.env.local` (not versioned):
 
 ```
 DATABASE_URL="mysql://root:@127.0.0.1:3306/suivi_depenses?serverVersion=8.0"
 ```
 
-Créer la base et jouer les migrations :
+Create the database and run the migrations:
 
 ```bash
 php bin/console doctrine:database:create
 php bin/console doctrine:migrations:migrate
 ```
 
-Générer les clés JWT (une seule fois) :
+Generate the JWT key pair (one-time setup):
 
 ```bash
 php bin/console lexik:jwt:generate-keypair
 ```
 
-Lancer le serveur de développement :
+Start the development server:
 
 ```bash
 php -S 127.0.0.1:8000 -t public
 ```
 
-L'API est alors disponible sur `http://127.0.0.1:8000/api`, avec la
-documentation interactive (Swagger UI) à la racine.
+The API is then available at `http://127.0.0.1:8000/api`, with interactive
+documentation (Swagger UI) at the root.
 
-## Authentification
+## Authentication
 
-Connexion via `POST /api/login_check` avec un corps JSON
-`{"username": "email@exemple.com", "password": "..."}`, qui renvoie un token
-JWT. Ce token doit ensuite être envoyé dans l'en-tête
-`Authorization: Bearer <token>` pour accéder aux routes protégées de l'API.
+Log in via `POST /api/login_check` with a JSON body
+`{"username": "email@example.com", "password": "..."}`, which returns a JWT
+token. That token must then be sent in the `Authorization: Bearer <token>`
+header to access protected API routes.
 
-## État actuel
+## Current status
 
-- [x] Backend Symfony + API Platform fonctionnel
-- [x] Entités User / Category / Expense créées et migrées
-- [x] Authentification JWT (connexion + protection des routes)
-- [ ] Endpoint d'inscription utilisateur
-- [ ] Frontend React
+- [x] Symfony backend + API Platform working
+- [x] User / Category / Expense entities created and migrated
+- [x] JWT authentication (login + protected routes)
+- [ ] User registration endpoint
+- [ ] React frontend
 
-## Projet suivant
+## Next project
 
-Un second projet, utilisant React + NestJS, est prévu pour comparer les deux
-approches backend.
+A second project, using React + NestJS, is planned to compare both backend
+approaches.
