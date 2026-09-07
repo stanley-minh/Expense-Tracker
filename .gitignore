@@ -1,0 +1,22 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Editeurs
+.vscode/*
+!.vscode/extensions.json
+.idea/
+
+# Frontend (React / Vite) — à venir
+frontend/node_modules/
+frontend/dist/
+frontend/.env
+frontend/.env.local
+frontend/*.log
+
+# Logs divers
+*.log
+npm-debug.log*
+
+# Backend : voir backend/.gitignore (vendor/, var/, .env.local, clés JWT, etc.)
