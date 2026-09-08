@@ -89,7 +89,7 @@ header to access protected API routes.
 - [x] Symfony backend + API Platform working
 - [x] User / Category / Expense entities created and migrated
 - [x] JWT authentication (login + protected routes)
-- [ ] User registration endpoint
+- [x] User registration endpoint
 - [ ] React frontend
 
 ## Next project
