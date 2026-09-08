@@ -2,36 +2,67 @@
 
 namespace App\Entity;
 
+use ApiPlatform\Metadata\ApiResource;
+use ApiPlatform\Metadata\Get;
+use ApiPlatform\Metadata\GetCollection;
+use ApiPlatform\Metadata\Post;
 use App\Repository\UserRepository;
+use App\State\UserPasswordHasher;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
 use Symfony\Component\Security\Core\User\UserInterface;
+use Symfony\Component\Serializer\Attribute\Groups;
+use Symfony\Component\Validator\Constraints as Assert;
 
 #[ORM\Entity(repositoryClass: UserRepository::class)]
+#[ApiResource(
+    operations: [
+        new GetCollection(security: "is_granted('ROLE_USER')"),
+        new Get(security: "is_granted('ROLE_USER') and object == user"),
+        new Post(
+            processor: UserPasswordHasher::class,
+            validationContext: ['groups' => ['Default', 'user:create']],
+        ),
+    ],
+    normalizationContext: ['groups' => ['user:read']],
+    denormalizationContext: ['groups' => ['user:create']],
+)]
 #[ORM\UniqueConstraint(name: 'UNIQ_IDENTIFIER_EMAIL', fields: ['email'])]
 class User implements UserInterface, PasswordAuthenticatedUserInterface
 {
+    #[Groups(['user:read'])]
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
     private ?int $id = null;
 
+    #[Groups(['user:read', 'user:create'])]
+    #[Assert\NotBlank]
+    #[Assert\Email]
     #[ORM\Column(length: 180)]
     private ?string $email = null;
 
     /**
      * @var list<string> The user roles
      */
+    #[Groups(['user:read'])]
     #[ORM\Column]
     private array $roles = [];
 
     /**
      * @var string The hashed password
+     *
+     * Aucun groupe volontairement : jamais exposé en lecture, jamais accepté en écriture directe.
      */
     #[ORM\Column]
     private ?string $password = null;
+
+    #[Groups(['user:create'])]
+    #[Assert\NotBlank(groups: ['user:create'])]
+    #[Assert\Length(min: 8, groups: ['user:create'])]
+    private ?string $plainPassword = null;
 
     /**
      * @var Collection<int, Category>
@@ -115,6 +146,27 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         return $this;
     }
 
+    public function getPlainPassword(): ?string
+    {
+        return $this->plainPassword;
+    }
+
+    public function setPlainPassword(?string $plainPassword): static
+    {
+        $this->plainPassword = $plainPassword;
+
+        return $this;
+    }
+
+    /**
+     * @see UserInterface — appelé automatiquement par Symfony après authentification.
+     * Le plainPassword est déjà effacé manuellement dans le State Processor,
+     * donc rien à faire ici, mais la méthode reste requise par l'interface.
+     */
+    public function eraseCredentials(): void
+    {
+    }
+
     /**
      * Ensure the session doesn't contain actual password hashes by CRC32C-hashing them, as supported since Symfony 7.3.
      */
@@ -147,7 +199,6 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function removeCategory(Category $category): static
     {
         if ($this->categories->removeElement($category)) {
-            // set the owning side to null (unless already changed)
             if ($category->getUser() === $this) {
                 $category->setUser(null);
             }
@@ -177,7 +228,6 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function removeExpense(Expense $expense): static
     {
         if ($this->expenses->removeElement($expense)) {
-            // set the owning side to null (unless already changed)
             if ($expense->getUser() === $this) {
                 $expense->setUser(null);
             }
