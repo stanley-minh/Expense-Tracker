@@ -7,6 +7,13 @@ use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
 /**
+ * Repository Doctrine pour Expense.
+ *
+ * Généré par `bin/console make:entity`, aucune méthode personnalisée pour
+ * l'instant (même remarque que CategoryRepository). C'est ici qu'irait, par
+ * exemple, une méthode `findByUserAndDateRange()` le jour où l'app aura besoin
+ * d'un endpoint de filtrage/agrégation qui dépasse le CRUD auto-généré.
+ *
  * @extends ServiceEntityRepository<Expense>
  */
 class ExpenseRepository extends ServiceEntityRepository
