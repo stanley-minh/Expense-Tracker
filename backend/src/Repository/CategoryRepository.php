@@ -7,6 +7,14 @@ use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
 /**
+ * Repository Doctrine pour Category.
+ *
+ * Généré par `bin/console make:entity` et non modifié depuis : aucune méthode
+ * de requête personnalisée n'a encore été ajoutée. API Platform s'appuie dessus
+ * en interne (via le State Provider Doctrine par défaut) pour servir
+ * GET /api/categories et GET /api/categories/{id} — pas besoin d'appeler ce
+ * repository à la main pour ça.
+ *
  * @extends ServiceEntityRepository<Category>
  */
 class CategoryRepository extends ServiceEntityRepository
