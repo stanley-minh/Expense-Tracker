@@ -10,6 +10,13 @@ use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
 use Symfony\Component\Security\Core\User\PasswordUpgraderInterface;
 
 /**
+ * Repository Doctrine pour User.
+ *
+ * Implémente PasswordUpgraderInterface en plus du repository standard : c'est
+ * ce qui permet à Symfony de rehasher automatiquement un mot de passe existant
+ * si l'algorithme de hash par défaut change entre deux connexions (ex: passage
+ * à un coût bcrypt/argon2 plus élevé), sans action de l'utilisateur.
+ *
  * @extends ServiceEntityRepository<User>
  */
 class UserRepository extends ServiceEntityRepository implements PasswordUpgraderInterface
@@ -20,7 +27,10 @@ class UserRepository extends ServiceEntityRepository implements PasswordUpgrader
     }
 
     /**
-     * Used to upgrade (rehash) the user's password automatically over time.
+     * Appelée automatiquement par le composant Security lors d'une connexion
+     * réussie si le hash stocké ne correspond plus aux paramètres de hashing
+     * actuels (voir password_hashers dans security.yaml). Persiste directement
+     * le nouveau hash en base.
      */
     public function upgradePassword(PasswordAuthenticatedUserInterface $user, string $newHashedPassword): void
     {

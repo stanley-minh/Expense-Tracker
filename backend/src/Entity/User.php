@@ -16,6 +16,30 @@ use Symfony\Component\Security\Core\User\UserInterface;
 use Symfony\Component\Serializer\Attribute\Groups;
 use Symfony\Component\Validator\Constraints as Assert;
 
+/**
+ * Compte utilisateur de l'application.
+ *
+ * Entité Doctrine ET utilisateur du système de sécurité Symfony à la fois
+ * (elle implémente {@see UserInterface} et {@see PasswordAuthenticatedUserInterface}) :
+ * c'est elle que Symfony charge pour authentifier une requête JWT et vérifier les rôles.
+ *
+ * Exposée en API REST via #[ApiResource] avec seulement 3 opérations autorisées
+ * (contrairement à Category/Expense qui ont le CRUD complet par défaut) :
+ * - GetCollection : liste des utilisateurs, réservée aux utilisateurs connectés (ROLE_USER).
+ * - Get (item)     : consultation d'un utilisateur, réservée à l'utilisateur lui-même
+ *                    (condition `object == user`, où `user` est injecté par API Platform
+ *                    comme étant l'utilisateur authentifié de la requête courante).
+ * - Post           : inscription, publique (voir access_control dans security.yaml),
+ *                    déléguée au State Processor {@see UserPasswordHasher} qui hache
+ *                    le mot de passe avant la sauvegarde.
+ *
+ * Il n'y a volontairement AUCUNE opération Put/Patch/Delete : on ne peut ni modifier
+ * ni supprimer un utilisateur via l'API pour l'instant.
+ *
+ * normalizationContext / denormalizationContext restreignent les champs exposés en
+ * lecture (groupe `user:read`) et acceptés en écriture (groupe `user:create`) via
+ * les attributs #[Groups(...)] posés sur chaque propriété ci-dessous.
+ */
 #[ORM\Entity(repositoryClass: UserRepository::class)]
 #[ApiResource(
     operations: [
@@ -38,6 +62,11 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column]
     private ?int $id = null;
 
+    /**
+     * Sert d'identifiant de connexion (voir getUserIdentifier()) en plus d'être
+     * l'adresse email du compte. Doit rester unique (contrainte UNIQ_IDENTIFIER_EMAIL
+     * ci-dessus).
+     */
     #[Groups(['user:read', 'user:create'])]
     #[Assert\NotBlank]
     #[Assert\Email]
@@ -59,6 +88,13 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column]
     private ?string $password = null;
 
+    /**
+     * Mot de passe en clair, reçu uniquement à la création du compte (groupe
+     * `user:create`) et jamais persisté tel quel : {@see UserPasswordHasher} le
+     * transforme en hash puis le remet à null avant l'écriture en base. Les règles
+     * de validation (NotBlank, longueur minimale 8) ne s'appliquent qu'au groupe
+     * `user:create`, donc uniquement lors de l'inscription.
+     */
     #[Groups(['user:create'])]
     #[Assert\NotBlank(groups: ['user:create'])]
     #[Assert\Length(min: 8, groups: ['user:create'])]
@@ -76,6 +112,10 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\OneToMany(targetEntity: Expense::class, mappedBy: 'user')]
     private Collection $expenses;
 
+    /**
+     * Initialise les collections Doctrine à vide : indispensable, sinon getCategories()/
+     * getExpenses() renverraient null tant que l'entité n'a pas été rechargée depuis la base.
+     */
     public function __construct()
     {
         $this->categories = new ArrayCollection();
@@ -139,6 +179,11 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         return $this->password;
     }
 
+    /**
+     * Assigne directement le hash (jamais le mot de passe en clair — voir
+     * setPlainPassword()). Utilisé par UserPasswordHasher et par
+     * UserRepository::upgradePassword() lors du rehash automatique.
+     */
     public function setPassword(string $password): static
     {
         $this->password = $password;
@@ -151,6 +196,11 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         return $this->plainPassword;
     }
 
+    /**
+     * Reçoit le mot de passe en clair envoyé par le client à l'inscription.
+     * Ne jamais appeler getPlainPassword() après le passage dans
+     * UserPasswordHasher::process() : la valeur y est remise à null par sécurité.
+     */
     public function setPlainPassword(?string $plainPassword): static
     {
         $this->plainPassword = $plainPassword;
@@ -186,6 +236,12 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         return $this->categories;
     }
 
+    /**
+     * Ajoute une catégorie à cet utilisateur en maintenant les deux côtés de la
+     * relation OneToMany/ManyToOne synchronisés (côté User ET côté Category) —
+     * c'est le rôle habituel des méthodes add* / remove* sur le côté "inverse"
+     * d'une relation Doctrine bidirectionnelle.
+     */
     public function addCategory(Category $category): static
     {
         if (!$this->categories->contains($category)) {
@@ -215,6 +271,9 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         return $this->expenses;
     }
 
+    /**
+     * Même logique de synchronisation bidirectionnelle que addCategory().
+     */
     public function addExpense(Expense $expense): static
     {
         if (!$this->expenses->contains($expense)) {
