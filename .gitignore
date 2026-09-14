@@ -14,7 +14,6 @@ frontend/dist/
 frontend/.env
 frontend/.env.local
 frontend/*.log
-
 # Logs divers
 *.log
 npm-debug.log*
