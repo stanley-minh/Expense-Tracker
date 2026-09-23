@@ -1,9 +1,8 @@
 // src/App.tsx
 
 import { Routes, Route } from "react-router";
-import Home from "./home";
-import Login from "./pages/login";
-
+import Home from "./pages/Home";
+import Login from "./pages/Login";
 /**
  * Composant racine de l'application.
  *
