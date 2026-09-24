@@ -25,7 +25,7 @@ import { useState } from "react";
      * `event.preventDefault()` empêche le rechargement complet de la page
      * que ferait un <form> HTML classique par défaut.
      */
-    function handleSubmit(event: React.FormEvent) {
+    async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
         event.preventDefault();
         console.log("À envoyer à l'API :", { email, password });
         // Prochaine étape : remplacer ce console.log par un vrai fetch vers /api/login_check
