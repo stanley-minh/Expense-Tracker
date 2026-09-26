@@ -1,34 +1,28 @@
-// src/pages/login.tsx
-
 import { useState } from "react";
 
-    /**
-     * Page de connexion.
-     *
-     * Formulaire contrôlé (email + mot de passe) qui appelle POST /api/login_check
-     * pour obtenir un token JWT.
-     *
-     * @remarks
-     * Version volontairement minimale à ce stade : le formulaire existe et
-     * se soumet, mais ne stocke pas encore le token ni ne redirige l'utilisateur.
-     * Ces deux points seront ajoutés à l'étape suivante (state partagé via
-     * Context API, pour que le token soit accessible depuis toute l'app).
-     */function Login() {
-    /** Valeur actuelle du champ email, mise à jour à chaque frappe. */
+/**
+ * Login page.
+ *
+ * Controlled form (email + password) that calls POST /api/login_check
+ * to obtain a JWT.
+ *
+ * @remarks
+ * Minimal version: the token is only logged, not stored yet, and errors
+ * are not handled. Token storage (Context API) and error handling come next.
+ */
+function Login() {
+    /** Current value of the email field. */
     const [email, setEmail] = useState("");
 
-    /** Valeur actuelle du champ mot de passe. */
+    /** Current value of the password field. */
     const [password, setPassword] = useState("");
 
     /**
-     * Gère la soumission du formulaire.
-     * `event.preventDefault()` empêche le rechargement complet de la page
-     * que ferait un <form> HTML classique par défaut.
+     * Handles the form submission: sends the credentials to the API.
+     * `event.preventDefault()` stops the full page reload that a classic
+     * HTML <form> would trigger by default.
      */
     async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
-        event.preventDefault();
-        console.log("À envoyer à l'API :", { email, password });
-        // Prochaine étape : remplacer ce console.log par un vrai fetch vers /api/login_check
         event.preventDefault();
         // fetch returns a Promise: "await" pauses until the server answers
         const response = await fetch("http://127.0.0.1:8000/api/login_check", {
@@ -44,7 +38,7 @@ import { useState } from "react";
     }
     return (
         <form onSubmit={handleSubmit}>
-            <h1>Connexion</h1>
+            <h1>Log in</h1>
             <label>
                 Email
                 <input
@@ -54,14 +48,14 @@ import { useState } from "react";
                 />
             </label>
             <label>
-                Mot de passe
+                Password
                 <input
                     type="password"
                     value={password}
                     onChange={(event) => setPassword(event.target.value)}
                 />
             </label>
-            <button type="submit">Se connecter</button>
+            <button type="submit">Log in</button>
         </form>
     );
 }
