@@ -29,6 +29,8 @@ function Login() {
     async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
         event.preventDefault();
         // fetch returns a Promise: "await" pauses until the server answers
+        // Clear the previous error: each attempt starts from a clean state
+        setError(null);
         const response = await fetch("http://127.0.0.1:8000/api/login_check", {
             method: "POST",
             // Tells the server the body is JSON, otherwise it can't parse it
