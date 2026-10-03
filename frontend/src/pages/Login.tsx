@@ -8,7 +8,9 @@ import { useState } from "react";
  *
  * @remarks
  * Minimal version: the token is only logged, not stored yet.
- * Invalid credentials (non-2xx response) display an error message.
+ * Invalid credentials (non-2xx response) and network failures display
+ * distinct error messages. The submit button is disabled while the
+ * request is in progress to prevent duplicate submissions.
  * Token storage (Context API) comes next.
  */
 function Login() {
@@ -31,12 +33,12 @@ function Login() {
    */
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    // fetch returns a Promise: "await" pauses until the server answers
     // Clear the previous error: each attempt starts from a clean state
     setError(null);
     // Disable the button until the request is over (see finally below)
     setIsLoading(true);
     try {
+      // fetch returns a Promise: "await" pauses until the server answers
       const response = await fetch("http://127.0.0.1:8000/api/login_check", {
         method: "POST",
         // Tells the server the body is JSON, otherwise it can't parse it
@@ -55,6 +57,7 @@ function Login() {
       const data = await response.json();
       console.log(response.status, data);
     } catch (err) {
+      // fetch only rejects on network failure (server down, no connection, CORS)
       console.error(err);
       setError("Unable to reach the server. Please try again later.");
     } finally {
@@ -63,6 +66,7 @@ function Login() {
       setIsLoading(false);
     }
   }
+
   return (
     <form onSubmit={handleSubmit}>
       <h1>Log in</h1>
