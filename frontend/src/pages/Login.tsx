@@ -31,7 +31,7 @@ function Login() {
    * `event.preventDefault()` stops the full page reload that a classic
    * HTML <form> would trigger by default.
    */
-  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: React.SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
     // Clear the previous error: each attempt starts from a clean state
     setError(null);
