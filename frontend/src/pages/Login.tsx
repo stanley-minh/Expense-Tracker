@@ -21,6 +21,9 @@ function Login() {
   /** Error message displayed to the user, or null when there is no error. */
   const [error, setError] = useState<string | null>(null);
 
+  /** Whether the login request is in progress (disables the submit button). */
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+
   /**
    * Handles the form submission: sends the credentials to the API.
    * `event.preventDefault()` stops the full page reload that a classic
@@ -31,6 +34,8 @@ function Login() {
     // fetch returns a Promise: "await" pauses until the server answers
     // Clear the previous error: each attempt starts from a clean state
     setError(null);
+    // Disable the button until the request is over (see finally below)
+    setIsLoading(true);
     try {
       const response = await fetch("http://127.0.0.1:8000/api/login_check", {
         method: "POST",
@@ -52,6 +57,10 @@ function Login() {
     } catch (err) {
       console.error(err);
       setError("Unable to reach the server. Please try again later.");
+    } finally {
+      // Runs whatever happens above (success, early return or error),
+      // so the button can never stay disabled.
+      setIsLoading(false);
     }
   }
   return (
@@ -74,7 +83,9 @@ function Login() {
         />
       </label>
       {error && <p role="alert">{error}</p>}
-      <button type="submit">Log in</button>
+      <button type="submit" disabled={isLoading}>
+        {isLoading ? "Logging in..." : "Log in"}
+      </button>
     </form>
   );
 }
