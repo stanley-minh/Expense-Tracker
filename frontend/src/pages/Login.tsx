@@ -1,59 +1,97 @@
-// src/pages/login.tsx
-
 import { useState } from "react";
 
 /**
- * Page de connexion.
+ * Login page.
  *
- * Formulaire contrôlé (email + mot de passe) qui appelle POST /api/login_check
- * pour obtenir un token JWT.
+ * Controlled form (email + password) that calls POST /api/login_check
+ * to obtain a JWT.
  *
  * @remarks
- * Version volontairement minimale à ce stade : le formulaire existe et
- * se soumet, mais ne stocke pas encore le token ni ne redirige l'utilisateur.
- * Ces deux points seront ajoutés à l'étape suivante (state partagé via
- * Context API, pour que le token soit accessible depuis toute l'app).
+ * Minimal version: the token is only logged, not stored yet.
+ * Invalid credentials (non-2xx response) and network failures display
+ * distinct error messages. The submit button is disabled while the
+ * request is in progress to prevent duplicate submissions.
+ * Token storage (Context API) comes next.
  */
 function Login() {
-    /** Valeur actuelle du champ email, mise à jour à chaque frappe. */
-    const [email, setEmail] = useState("");
+  /** Current value of the email field. */
+  const [email, setEmail] = useState("");
 
-    /** Valeur actuelle du champ mot de passe. */
-    const [password, setPassword] = useState("");
+  /** Current value of the password field. */
+  const [password, setPassword] = useState("");
 
-    /**
-     * Gère la soumission du formulaire.
-     * `event.preventDefault()` empêche le rechargement complet de la page
-     * que ferait un <form> HTML classique par défaut.
-     */
-    function handleSubmit(event: React.FormEvent) {
-        event.preventDefault();
-        console.log("À envoyer à l'API :", { email, password });
-        // Prochaine étape : remplacer ce console.log par un vrai fetch vers /api/login_check
+  /** Error message displayed to the user, or null when there is no error. */
+  const [error, setError] = useState<string | null>(null);
+
+  /** Whether the login request is in progress (disables the submit button). */
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+
+  /**
+   * Handles the form submission: sends the credentials to the API.
+   * `event.preventDefault()` stops the full page reload that a classic
+   * HTML <form> would trigger by default.
+   */
+  async function handleSubmit(event: React.SubmitEvent<HTMLFormElement>) {
+    event.preventDefault();
+    // Clear the previous error: each attempt starts from a clean state
+    setError(null);
+    // Disable the button until the request is over (see finally below)
+    setIsLoading(true);
+    try {
+      // fetch returns a Promise: "await" pauses until the server answers
+      const response = await fetch("http://127.0.0.1:8000/api/login_check", {
+        method: "POST",
+        // Tells the server the body is JSON, otherwise it can't parse it
+        headers: { "Content-Type": "application/json" },
+        // Keys must match the backend config (username_path: email)
+        body: JSON.stringify({ email, password }),
+      });
+
+      // fetch does NOT throw on HTTP errors (401, 500...),
+      // so we must check the status ourselves.
+      if (!response.ok) {
+        setError("Invalid email or password.");
+        return; // stop here: no token to read
+      }
+
+      const data = await response.json();
+      console.log(response.status, data);
+    } catch (err) {
+      // fetch only rejects on network failure (server down, no connection, CORS)
+      console.error(err);
+      setError("Unable to reach the server. Please try again later.");
+    } finally {
+      // Runs whatever happens above (success, early return or error),
+      // so the button can never stay disabled.
+      setIsLoading(false);
     }
+  }
 
-    return (
-        <form onSubmit={handleSubmit}>
-            <h1>Connexion</h1>
-            <label>
-                Email
-                <input
-                    type="email"
-                    value={email}
-                    onChange={(event) => setEmail(event.target.value)}
-                />
-            </label>
-            <label>
-                Mot de passe
-                <input
-                    type="password"
-                    value={password}
-                    onChange={(event) => setPassword(event.target.value)}
-                />
-            </label>
-            <button type="submit">Se connecter</button>
-        </form>
-    );
+  return (
+    <form onSubmit={handleSubmit}>
+      <h1>Log in</h1>
+      <label>
+        Email
+        <input
+          type="email"
+          value={email}
+          onChange={(event) => setEmail(event.target.value)}
+        />
+      </label>
+      <label>
+        Password
+        <input
+          type="password"
+          value={password}
+          onChange={(event) => setPassword(event.target.value)}
+        />
+      </label>
+      {error && <p role="alert">{error}</p>}
+      <button type="submit" disabled={isLoading}>
+        {isLoading ? "Logging in..." : "Log in"}
+      </button>
+    </form>
+  );
 }
 
 export default Login;
