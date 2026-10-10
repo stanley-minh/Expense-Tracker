@@ -72,11 +72,7 @@ function Login() {
       <h1>Log in</h1>
       <label>
         Email
-        <input
-          type="email"
-          value={email}
-          onChange={(event) => setEmail(event.target.value)}
-        />
+        <input type="email" value={email} onChange={(event) => setEmail(event.target.value)} />
       </label>
       <label>
         Password

@@ -1,9 +1,9 @@
 function Home() {
-    return (
-        <>
-            <h1>Expense Tracker</h1>
-        </>
-    )
+  return (
+    <>
+      <h1>Expense Tracker</h1>
+    </>
+  );
 }
 
-export default Home
+export default Home;
