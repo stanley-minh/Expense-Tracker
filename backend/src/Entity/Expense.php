@@ -6,17 +6,33 @@ use App\Repository\ExpenseRepository;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 use ApiPlatform\Metadata\ApiResource;
+use ApiPlatform\Metadata\Delete;
+use ApiPlatform\Metadata\Get;
+use ApiPlatform\Metadata\GetCollection;
+use ApiPlatform\Metadata\Patch;
+use ApiPlatform\Metadata\Post;
 
 /**
  * Une dépense unitaire : montant, description optionnelle, date, rattachée à
  * une catégorie et à un utilisateur.
- *
- * Comme Category, #[ApiResource] sans paramètre expose le CRUD complet sur
- * /api/expenses sans restriction de sécurité propre à la ressource — même
- * remarque que sur Category concernant l'absence d'isolement par utilisateur.
+ * Sécurité (isolation des données par propriétaire) :
+ * - Get / Patch / Delete : réservés au propriétaire de la dépense
+ *   (`object.getUser() == user`), sinon 403. Protège contre l'IDOR :
+ *   un utilisateur ne peut pas lire/modifier/supprimer la dépense d'un autre
+ *   en devinant son id.
+ * - GetCollection / Post : à sécuriser (filtrage de la liste par utilisateur,
+ *   attribution automatique du propriétaire) — voir sous-étapes suivantes.
  */
 #[ORM\Entity(repositoryClass: ExpenseRepository::class)]
-#[ApiResource]
+#[ApiResource (
+    operations: [
+        new GetCollection(),
+        new Post(),
+        new Get(security: 'object.getUser() == user'),
+        new Patch(security: 'object.getUser() == user'),
+        new Delete(security: 'object.getUser() == user'),
+    ],
+)]
 class Expense
 {
     #[ORM\Id]
