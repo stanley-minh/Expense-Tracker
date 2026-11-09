@@ -20,6 +20,10 @@ $router = new Router();
 
 // --- Routes ---
 $router->get('/api/expenses', [ExpenseController::class, 'index']);
+$router->get('/api/expenses/{id}', [ExpenseController::class, 'show']);
+$router->post('/api/expenses', [ExpenseController::class, 'store']);
+$router->put('/api/expenses/{id}', [ExpenseController::class, 'update']);
+$router->delete('/api/expenses/{id}', [ExpenseController::class, 'destroy']);
 
 // --- Execution ---
 try {
