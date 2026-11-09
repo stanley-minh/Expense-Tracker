@@ -19,12 +19,11 @@ CREATE TABLE IF NOT EXISTS categories (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 INSERT INTO categories (slug, name) VALUES
-    ('contribution', 'Cotisation'),
-    ('agape',        'Agape'),
-    ('event',        'Évènement'),
-    ('hygiene',      'Hygiène'),
-    ('equipment',    'Matériel'),
-    ('other',        'Autre');
+    ('agape',     'Agape'),
+    ('event',     'Évènement'),
+    ('hygiene',   'Hygiène'),
+    ('equipment', 'Matériel'),
+    ('other',     'Autre');
 
 -- 2. New columns, NULL allowed for now: existing rows have no category yet
 ALTER TABLE expenses

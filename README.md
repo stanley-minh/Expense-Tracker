@@ -82,8 +82,8 @@ docker compose exec -T database sh -c 'mysql -u"$MYSQL_USER" -p"$MYSQL_PASSWORD"
 
 ## Context
 
-The app tracks the church's day-to-day expenses (contributions, shared meals,
-events, hygiene, equipment). Larger expenses (building, legal...) are handled
+The app tracks the church's day-to-day expenses (shared meals, events,
+hygiene, equipment). Larger expenses (building, legal...) are handled
 by the accountant and are out of scope.
 
 **Language**: the code, comments and documentation are in English; everything
@@ -95,7 +95,6 @@ shown to users (interface, API error messages, category names) is in French.
 
   | slug           | name (displayed) |
   | -------------- | ---------------- |
-  | `contribution` | Cotisation       |
   | `agape`        | Agape            |
   | `event`        | Évènement        |
   | `hygiene`      | Hygiène          |
@@ -141,7 +140,7 @@ avoid floating-point rounding errors. A single expense is limited to
 - [x] Read expenses from MySQL
 - [x] Tailwind CSS + daisyUI setup
 - [x] Full CRUD (POST, PUT, DELETE, routes with parameters, validation)
-- [x] Expense categories (Cotisation, Agape, Évènement, Hygiène, Matériel, Autre + free text)
+- [x] Expense categories (Agape, Évènement, Hygiène, Matériel, Autre + free text)
 - [ ] Connect React to the API
 - [ ] Authentication
 - [ ] Redis (cache, login rate limiting)

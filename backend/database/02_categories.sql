@@ -9,9 +9,8 @@
 SET NAMES utf8mb4;
 
 INSERT INTO categories (slug, name) VALUES
-    ('contribution', 'Cotisation'),
-    ('agape',        'Agape'),
-    ('event',        'Évènement'),
-    ('hygiene',      'Hygiène'),
-    ('equipment',    'Matériel'),
-    ('other',        'Autre');
+    ('agape',     'Agape'),
+    ('event',     'Évènement'),
+    ('hygiene',   'Hygiène'),
+    ('equipment', 'Matériel'),
+    ('other',     'Autre');

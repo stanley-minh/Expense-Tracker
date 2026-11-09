@@ -6,7 +6,7 @@ use PDO;
 
 /**
  * Data access for the "categories" table
- * (Cotisation, Agape, Évènement, Hygiène, Matériel, Autre).
+ * (Agape, Évènement, Hygiène, Matériel, Autre).
  */
 final class ModelCategory extends Model
 {
@@ -30,7 +30,7 @@ final class ModelCategory extends Model
     }
 
     /**
-     * Returns every category as an id => slug map, e.g. [1 => 'contribution', 6 => 'other'].
+     * Returns every category as an id => slug map, e.g. [1 => 'agape', 5 => 'other'].
      * Used by the validator: it needs to know which ids exist AND which one is "other".
      *
      * @return array<int, string>

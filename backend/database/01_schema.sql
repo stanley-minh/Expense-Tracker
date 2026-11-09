@@ -7,7 +7,7 @@
 -- otherwise it may read it with another encoding and store "Ã©" instead of "é".
 SET NAMES utf8mb4;
 
--- Expense categories (contribution, agape, event, hygiene, equipment, other).
+-- Expense categories (agape, event, hygiene, equipment, other).
 -- A separate table rather than a fixed list in the code: a new category
 -- can be added later with one INSERT, without touching the PHP code.
 CREATE TABLE IF NOT EXISTS categories (
