@@ -89,7 +89,7 @@ Errors: `400` body is not a JSON object · `404` unknown id or route ·
 
 Amounts are stored and returned in **cents** (`amount_cents`, integer) to
 avoid floating-point rounding errors. A single expense is limited to
-**€1,000.00** (`100000` cents).
+**€10,000.00** (`1000000` cents).
 
 ## Current status
 

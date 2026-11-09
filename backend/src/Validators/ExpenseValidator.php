@@ -13,11 +13,11 @@ use DateTimeImmutable;
 final class ExpenseValidator
 {
     /**
-     * Business rule: a single expense (food, hygiene, events) never exceeds 1,000.00 €.
+     * Business rule: a single expense (food, hygiene, events) never exceeds 10,000.00 €.
      * Larger expenses (building, legal...) are handled by the church's accountant.
-     * 100,000 cents = 1,000.00 €.
+     * 1,000,000 cents = 10,000.00 €.
      */
-    private const MAX_AMOUNT_CENTS = 100_000;
+    private const MAX_AMOUNT_CENTS = 1_000_000;
 
     /**
      * Checks every field and returns the list of errors.
@@ -38,14 +38,14 @@ final class ExpenseValidator
             $errors['label'] = 'Label must be at most 255 characters.';
         }
 
-        // amount_cents: strictly positive integer, at most 1,000.00 € (business rule)
+        // amount_cents: strictly positive integer, at most 10,000.00 € (business rule)
         $amount = $data['amount_cents'] ?? null;
         if (!is_int($amount)) {
             // is_int rejects "4250" (string) and 42.5 (float): amounts are whole cents
             $errors['amount_cents'] = 'Amount must be an integer number of cents.';
         } elseif ($amount <= 0 || $amount > self::MAX_AMOUNT_CENTS) {
             $errors['amount_cents'] = 'Amount must be between 1 and ' . self::MAX_AMOUNT_CENTS
-                . ' cents (€0.01 to €1,000.00).';
+                . ' cents (€0.01 to €10,000.00).';
         }
 
         // spent_at: real calendar date in YYYY-MM-DD format
