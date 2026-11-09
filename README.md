@@ -1,98 +1,89 @@
 # Expense Tracker
 
-A personal expense tracking application: each user creates an account,
-organizes their expenses into categories, and can view, create, edit or
-delete them (full CRUD).
+A personal expense tracking application. Users record their expenses and
+can view, create, edit or delete them (full CRUD).
 
 This project is a monorepo: the backend and frontend live in the same
 repository, in two separate folders.
 
+> The first version of this project used Symfony + API Platform.
+> It has been replaced by a hand-written PHP MVC backend (no framework),
+> to understand what a framework does under the hood.
+
 ## Tech stack
 
-- **Backend**: Symfony 8 (PHP 8.5)
-- **API**: API Platform (REST API generated automatically from Doctrine entities)
-- **Database**: MySQL 8.0
-- **Authentication**: JWT (LexikJWTAuthenticationBundle)
-- **CORS**: NelmioCorsBundle
-- **Frontend** (coming soon): React (Vite)
+- **Frontend**: React 19 + TypeScript (Vite), Tailwind CSS 4, daisyUI 5
+- **Backend**: native PHP 8.5, MVC architecture, no framework, no Composer
+- **Database**: MySQL 9.7 (LTS)
+- **Infrastructure**: Docker Compose — nginx + PHP-FPM + MySQL
+
+## Architecture
+
+```
+React (fetch) → nginx :8080 → PHP-FPM → Router → Controller → Model → MySQL
+                                                     ↓
+React  ←──────────────────── JSON (Response = the "View") ┘
+```
 
 ## Project structure
 
 ```
-suivi-depenses/
-├── backend/          Symfony + API Platform (REST API)
-│   ├── src/
-│   │   ├── Entity/       User.php, Category.php, Expense.php
-│   │   └── Repository/   associated Doctrine repositories
-│   ├── config/
-│   │   ├── packages/     api_platform.yaml, security.yaml, ...
-│   │   └── routes/       api_platform.yaml, lexik_jwt_authentication.yaml
-│   └── public/index.php  server entry point
-└── frontend/         React (Vite) — to be built
+Expense-Tracker/
+├── compose.yaml          Docker services (nginx, php, database)
+├── .env.example          environment template (copy to .env)
+├── docker/
+│   ├── php/Dockerfile    PHP-FPM image with pdo_mysql
+│   └── nginx/default.conf
+├── backend/
+│   ├── public/index.php  front controller (single entry point)
+│   ├── config/env.php    BDD_* constants read from .env
+│   ├── database/         SQL run on the first MySQL start (schema, seed)
+│   └── src/
+│       ├── Core/         Autoloader (PSR-4), Router, Response
+│       ├── Utils/        Utils::connect() (shared PDO connection)
+│       ├── Models/       Model (abstract), ModelExpense
+│       └── Controllers/  Controller (abstract), ExpenseController
+└── frontend/             React app (Vite)
 ```
 
-## Data model
+## Getting started
 
-- **User**: user account (email, hashed password, roles). Has many
-  categories and many expenses.
-- **Category**: an expense category (e.g. "Food", "Transport"). Belongs to
-  a user, groups several expenses.
-- **Expense**: a single expense (amount, description, date). Belongs to a
-  category and a user.
-
-## Setup (backend)
-
-Requirements: PHP 8.5, Composer, MySQL 8.
+Requirements: Docker Desktop, Node.js.
 
 ```bash
-cd backend
-composer install
+# 1. Environment variables (then set real passwords in .env)
+cp .env.example .env
+
+# 2. Backend + database
+docker compose up -d --build
+
+# 3. Frontend
+cd frontend
+npm install
+npm run dev
 ```
 
-Configure the database in `backend/.env.local` (not versioned):
+- API: http://localhost:8080/api/expenses
+- Frontend: http://localhost:5173
+- MySQL (e.g. MySQL Workbench): host `127.0.0.1`, port `3307`, user/password from `.env`
 
-```
-DATABASE_URL="mysql://root:@127.0.0.1:3306/suivi_depenses?serverVersion=8.0"
-```
+## API
 
-Create the database and run the migrations:
+| Method | Route           | Description       |
+| ------ | --------------- | ----------------- |
+| GET    | `/api/expenses` | List all expenses |
 
-```bash
-php bin/console doctrine:database:create
-php bin/console doctrine:migrations:migrate
-```
-
-Generate the JWT key pair (one-time setup):
-
-```bash
-php bin/console lexik:jwt:generate-keypair
-```
-
-Start the development server:
-
-```bash
-php -S 127.0.0.1:8000 -t public
-```
-
-The API is then available at `http://127.0.0.1:8000/api`, with interactive
-documentation (Swagger UI) at the root.
-
-## Authentication
-
-Log in via `POST /api/login_check` with a JSON body
-`{"username": "email@example.com", "password": "..."}`, which returns a JWT
-token. That token must then be sent in the `Authorization: Bearer <token>`
-header to access protected API routes.
+Amounts are stored and returned in **cents** (`amount_cents`, integer) to
+avoid floating-point rounding errors.
 
 ## Current status
 
-- [x] Symfony backend + API Platform working
-- [x] User / Category / Expense entities created and migrated
-- [x] JWT authentication (login + protected routes)
-- [x] User registration endpoint
-- [ ] React frontend
-
-## Next project
-
-A second project, using React + NestJS, is planned to compare both backend
-approaches.
+- [x] Docker stack (nginx, PHP-FPM, MySQL)
+- [x] MVC core: autoloader, router, JSON response
+- [x] Read expenses from MySQL
+- [x] Tailwind CSS + daisyUI setup
+- [ ] Full CRUD (POST, PUT, DELETE, routes with parameters)
+- [ ] Connect React to the API
+- [ ] Authentication
+- [ ] Redis (cache, login rate limiting)
+- [ ] Production deployment (VPS, HTTPS, CI/CD)

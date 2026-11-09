@@ -18,4 +18,5 @@ frontend/*.log
 *.log
 npm-debug.log*
 
-# Backend : voir backend/.gitignore (vendor/, var/, .env.local, clés JWT, etc.)
+# Secrets (Docker / backend) : only .env.example is committed
+.env
