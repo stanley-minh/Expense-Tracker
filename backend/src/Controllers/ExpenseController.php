@@ -4,6 +4,7 @@ namespace App\Controllers;
 
 use App\Core\Request;
 use App\Core\Response;
+use App\Models\ModelCategory;
 use App\Models\ModelExpense;
 use App\Validators\ExpenseValidator;
 
@@ -20,9 +21,13 @@ use App\Validators\ExpenseValidator;
  */
 final class ExpenseController extends Controller
 {
+    /** Second model: needed to check that the category sent by the client exists. */
+    private ModelCategory $categories;
+
     public function __construct()
     {
         parent::__construct(new ModelExpense());
+        $this->categories = new ModelCategory();
     }
 
     /**
@@ -43,7 +48,7 @@ final class ExpenseController extends Controller
         $expense = $this->getModel()->findById($id);
 
         if ($expense === null) {
-            Response::json(['error' => 'Expense not found'], 404);
+            Response::json(['error' => 'Dépense introuvable.'], 404);
             return;
         }
 
@@ -52,7 +57,8 @@ final class ExpenseController extends Controller
 
     /**
      * POST /api/expenses — creates an expense.
-     * Body: {"label": "...", "amount_cents": 1234, "spent_at": "YYYY-MM-DD"}
+     * Body: {"label": "...", "category_id": 1, "category_detail": null, "amount_cents": 1234, "spent_at": "YYYY-MM-DD"}
+     * category_detail is only required (and only kept) for the "other" (Autre) category.
      */
     public function store(): void
     {
@@ -80,7 +86,7 @@ final class ExpenseController extends Controller
     {
         // 404 first: no need to validate a body for a resource that does not exist
         if ($this->getModel()->findById($id) === null) {
-            Response::json(['error' => 'Expense not found'], 404);
+            Response::json(['error' => 'Dépense introuvable.'], 404);
             return;
         }
 
@@ -102,7 +108,7 @@ final class ExpenseController extends Controller
     public function destroy(int $id): void
     {
         if (!$this->getModel()->delete($id)) {
-            Response::json(['error' => 'Expense not found'], 404);
+            Response::json(['error' => 'Dépense introuvable.'], 404);
             return;
         }
 
@@ -113,23 +119,25 @@ final class ExpenseController extends Controller
      * Reads and validates the JSON body shared by store() and update().
      * Sends the 400 / 422 error response itself when something is wrong.
      *
-     * @return array{label: string, amount_cents: int, spent_at: string}|null
+     * @return array{label: string, category_id: int, category_detail: ?string, amount_cents: int, spent_at: string}|null
      *         Clean data, or null if an error response was sent
      */
     private function readValidBody(): ?array
     {
         $body = Request::json();
         if ($body === null) {
-            Response::json(['error' => 'Request body must be a JSON object'], 400);
+            Response::json(['error' => 'Le corps de la requête doit être un objet JSON.'], 400);
             return null;
         }
 
-        $errors = ExpenseValidator::validate($body);
+        $categorySlugs = $this->categories->findSlugsById();
+
+        $errors = ExpenseValidator::validate($body, $categorySlugs);
         if ($errors !== []) {
             Response::json(['errors' => $errors], 422);
             return null;
         }
 
-        return ExpenseValidator::clean($body);
+        return ExpenseValidator::clean($body, $categorySlugs);
     }
 }
