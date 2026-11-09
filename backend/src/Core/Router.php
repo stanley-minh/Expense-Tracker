@@ -122,10 +122,10 @@ final class Router
 
         if ($allowedMethods !== []) {
             header('Allow: ' . implode(', ', $allowedMethods));
-            Response::json(['error' => 'Method not allowed'], 405);
+            Response::json(['error' => 'Méthode non autorisée.'], 405);
             return;
         }
 
-        Response::json(['error' => 'Not found'], 404);
+        Response::json(['error' => 'Ressource introuvable.'], 404);
     }
 }
