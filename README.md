@@ -69,12 +69,27 @@ npm run dev
 
 ## API
 
-| Method | Route           | Description       |
-| ------ | --------------- | ----------------- |
-| GET    | `/api/expenses` | List all expenses |
+| Method | Route                | Description                  | Success              |
+| ------ | -------------------- | ---------------------------- | -------------------- |
+| GET    | `/api/expenses`      | List all expenses            | `200`                |
+| GET    | `/api/expenses/{id}` | Get one expense              | `200`                |
+| POST   | `/api/expenses`      | Create an expense            | `201` + `Location`   |
+| PUT    | `/api/expenses/{id}` | Replace an expense (all fields) | `200`             |
+| DELETE | `/api/expenses/{id}` | Delete an expense            | `204` (empty body)   |
+
+Request body (POST / PUT):
+
+```json
+{ "label": "Groceries", "amount_cents": 4250, "spent_at": "2026-11-02" }
+```
+
+Errors: `400` body is not a JSON object · `404` unknown id or route ·
+`405` method not allowed on this route · `422` invalid values, e.g.
+`{"errors": {"amount_cents": "Amount must be an integer number of cents."}}`
 
 Amounts are stored and returned in **cents** (`amount_cents`, integer) to
-avoid floating-point rounding errors.
+avoid floating-point rounding errors. A single expense is limited to
+**€1,000.00** (`100000` cents).
 
 ## Current status
 
@@ -82,7 +97,7 @@ avoid floating-point rounding errors.
 - [x] MVC core: autoloader, router, JSON response
 - [x] Read expenses from MySQL
 - [x] Tailwind CSS + daisyUI setup
-- [ ] Full CRUD (POST, PUT, DELETE, routes with parameters)
+- [x] Full CRUD (POST, PUT, DELETE, routes with parameters, validation)
 - [ ] Connect React to the API
 - [ ] Authentication
 - [ ] Redis (cache, login rate limiting)
