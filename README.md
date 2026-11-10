@@ -46,6 +46,12 @@ Expense-Tracker/
 │       ├── Controllers/  Controller (abstract), ExpenseController, CategoryController
 │       └── Validators/   ExpenseValidator
 └── frontend/             React app (Vite)
+    └── src/
+        ├── api/          client.ts: typed fetch calls + error classes
+        ├── components/   MonthSummary, ExpenseForm, ExpenseList
+        ├── pages/        Home (owns the data), Login
+        ├── types/        Expense, Category, ExpenseInput
+        └── utils/        money (cents <-> euros), date
 ```
 
 ## Getting started
@@ -66,7 +72,7 @@ npm run dev
 ```
 
 - API: http://localhost:8080/api/expenses
-- Frontend: http://localhost:5173
+- Frontend: http://localhost:5173 (Vite forwards `/api` to the PHP API, see `frontend/vite.config.ts`)
 - MySQL (e.g. MySQL Workbench): host `127.0.0.1`, port `3307`, user/password from `.env`
 
 ### Upgrading an existing database
@@ -141,7 +147,8 @@ avoid floating-point rounding errors. A single expense is limited to
 - [x] Tailwind CSS + daisyUI setup
 - [x] Full CRUD (POST, PUT, DELETE, routes with parameters, validation)
 - [x] Expense categories (Agape, Évènement, Hygiène, Matériel, Autre + free text)
-- [ ] Connect React to the API
+- [x] React frontend: month summary, add form (French UI), expense list, delete
+- [ ] Edit an expense from the interface
 - [ ] Authentication
 - [ ] Redis (cache, login rate limiting)
 - [ ] Production deployment (VPS, HTTPS, CI/CD)

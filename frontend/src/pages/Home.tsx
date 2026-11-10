@@ -1,33 +1,98 @@
+import { useEffect, useState } from "react";
+import { deleteExpense, getCategories, getExpenses } from "../api/client";
+import ExpenseForm from "../components/ExpenseForm";
+import ExpenseList from "../components/ExpenseList";
+import MonthSummary from "../components/MonthSummary";
+import type { Category, Expense } from "../types/expense";
+
 /**
- * Home page.
- *
- * Temporary static screen used to check the styling setup:
- * Tailwind handles the layout (padding, width, centering) and
- * daisyUI provides the components (card, stat, btn) that follow the theme.
+ * Sort order of the list: most recent date first, then most recently created
+ * (same order as the API: ORDER BY spent_at DESC, id DESC).
+ * "YYYY-MM-DD" strings sort correctly as text: year, then month, then day.
+ */
+function byMostRecent(a: Expense, b: Expense): number {
+  return b.spent_at.localeCompare(a.spent_at) || b.id - a.id;
+}
+
+/**
+ * Home page: month summary, add form and list of expenses.
  *
  * @remarks
- * Values are hard-coded for now. The next step fetches the real
- * expenses from the PHP API (GET /api/expenses).
+ * This page owns the data (expenses + categories) and passes it down to the
+ * components through props; the components report changes back through
+ * callbacks (onCreated, onDelete). Data flows down, events flow up.
  * Code is written in English, but every text shown to users is in French.
  */
 function Home() {
+  const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Initial load, once when the page appears ([] = no dependency)
+  useEffect(() => {
+    // AbortController: cancels the requests if the page disappears before they end
+    // (in development, StrictMode mounts the page twice on purpose to reveal such bugs)
+    const controller = new AbortController();
+
+    // Promise.all: both requests run in parallel, not one after the other
+    Promise.all([getExpenses(controller.signal), getCategories(controller.signal)])
+      .then(([loadedExpenses, loadedCategories]) => {
+        setExpenses(loadedExpenses);
+        setCategories(loadedCategories);
+      })
+      .catch((loadError) => {
+        if (controller.signal.aborted) return; // cancelled on purpose: not an error
+        console.error(loadError);
+        setError("Impossible de charger les dépenses. Le serveur est-il démarré ?");
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setIsLoading(false);
+      });
+
+    // Cleanup function: React calls it when the page is removed
+    return () => controller.abort();
+  }, []);
+
+  /** Adds the expense returned by the API, without reloading the whole list. */
+  function handleCreated(expense: Expense) {
+    // Functional update (prev => ...): always based on the latest state
+    setExpenses((prev) => [expense, ...prev].sort(byMostRecent));
+  }
+
+  /** Deletes on the server first, then removes the row from the screen. */
+  async function handleDelete(id: number) {
+    try {
+      await deleteExpense(id);
+      setExpenses((prev) => prev.filter((expense) => expense.id !== id));
+    } catch (deleteError) {
+      console.error(deleteError);
+      setError("Impossible de supprimer la dépense. Réessayez plus tard.");
+    }
+  }
+
   return (
-    <main className="min-h-screen bg-base-200 p-8">
-      <div className="card mx-auto max-w-md bg-base-100 shadow-xl">
-        <div className="card-body">
-          <h1 className="card-title text-2xl">Gestion des dépenses</h1>
+    <main className="min-h-screen bg-base-200 p-4 md:p-8">
+      <div className="mx-auto max-w-4xl space-y-6">
+        <h1 className="text-3xl font-bold">Gestion des dépenses</h1>
 
-          <div className="stat px-0">
-            <div className="stat-title">Total du mois</div>
-            <div className="stat-value text-primary">61,40 €</div>
+        {error && (
+          <div role="alert" className="alert alert-error">
+            {error}
           </div>
+        )}
 
-          <div className="card-actions justify-end">
-            <button type="button" className="btn btn-primary">
-              Ajouter une dépense
-            </button>
+        {isLoading ? (
+          <div className="flex justify-center py-12">
+            <span className="loading loading-spinner loading-lg" aria-label="Chargement" />
           </div>
-        </div>
+        ) : (
+          <>
+            <MonthSummary expenses={expenses} />
+            <ExpenseForm categories={categories} onCreated={handleCreated} />
+            <ExpenseList expenses={expenses} onDelete={handleDelete} />
+          </>
+        )}
       </div>
     </main>
   );
