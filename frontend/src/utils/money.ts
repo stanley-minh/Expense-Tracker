@@ -15,6 +15,18 @@ export function formatCents(cents: number): string {
 }
 
 /**
+ * Converts cents back into the text shown in the amount field (reverse of parseEurosToCents).
+ * Uses the Euclidean division by 100: quotient = euros, remainder = cents (always 0 to 99).
+ * @example centsToInputValue(4250) // "42,50"
+ * @example centsToInputValue(1200) // "12,00"
+ */
+export function centsToInputValue(cents: number): string {
+  const euros = Math.floor(cents / 100); // quotient
+  const rest = cents % 100; // remainder
+  return `${euros},${String(rest).padStart(2, "0")}`;
+}
+
+/**
  * Converts what the user typed into integer cents.
  * Accepts a comma or a dot, and 0 to 2 decimals: "12" -> 1200, "3,5" -> 350, "0.29" -> 29.
  *

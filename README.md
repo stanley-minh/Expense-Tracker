@@ -48,7 +48,7 @@ Expense-Tracker/
 └── frontend/             React app (Vite)
     └── src/
         ├── api/          client.ts: typed fetch calls + error classes
-        ├── components/   MonthSummary, ExpenseForm, ExpenseList
+        ├── components/   MonthSummary, ExpenseForm, ExpenseList, ExpenseEditDialog
         ├── pages/        Home (owns the data), Login
         ├── types/        Expense, Category, ExpenseInput
         └── utils/        money (cents <-> euros), date
@@ -148,7 +148,7 @@ avoid floating-point rounding errors. A single expense is limited to
 - [x] Full CRUD (POST, PUT, DELETE, routes with parameters, validation)
 - [x] Expense categories (Agape, Évènement, Hygiène, Matériel, Autre + free text)
 - [x] React frontend: month summary, add form (French UI), expense list, delete
-- [ ] Edit an expense from the interface
+- [x] Edit an expense from the interface (dialog)
 - [ ] Authentication
 - [ ] Redis (cache, login rate limiting)
 - [ ] Production deployment (VPS, HTTPS, CI/CD)

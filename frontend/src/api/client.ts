@@ -80,6 +80,11 @@ export function createExpense(input: ExpenseInput): Promise<Expense> {
   return request<Expense>("/expenses", { method: "POST", body: JSON.stringify(input) });
 }
 
+/** PUT /api/expenses/{id} — replaces every field, returns the updated expense. */
+export function updateExpense(id: number, input: ExpenseInput): Promise<Expense> {
+  return request<Expense>(`/expenses/${id}`, { method: "PUT", body: JSON.stringify(input) });
+}
+
 /** DELETE /api/expenses/{id} */
 export function deleteExpense(id: number): Promise<void> {
   return request<void>(`/expenses/${id}`, { method: "DELETE" });

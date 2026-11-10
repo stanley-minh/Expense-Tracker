@@ -4,14 +4,16 @@ import { formatCents } from "../utils/money";
 
 interface ExpenseListProps {
   expenses: Expense[];
+  /** Called when the user clicks "Modifier" on a row. */
+  onEdit: (expense: Expense) => void;
   /** Called when the user confirms the deletion of an expense. */
   onDelete: (id: number) => void;
 }
 
 /**
- * Table of every expense, most recent first, with a delete button per row.
+ * Table of every expense, most recent first, with edit and delete buttons per row.
  */
-function ExpenseList({ expenses, onDelete }: ExpenseListProps) {
+function ExpenseList({ expenses, onEdit, onDelete }: ExpenseListProps) {
   if (expenses.length === 0) {
     return (
       <section className="card bg-base-100 shadow">
@@ -62,7 +64,15 @@ function ExpenseList({ expenses, onDelete }: ExpenseListProps) {
                   <td className="text-right whitespace-nowrap tabular-nums">
                     {formatCents(expense.amount_cents)}
                   </td>
-                  <td className="text-right">
+                  <td className="text-right whitespace-nowrap">
+                    <button
+                      type="button"
+                      className="btn btn-ghost btn-sm"
+                      onClick={() => onEdit(expense)}
+                      aria-label={`Modifier ${expense.label}`}
+                    >
+                      Modifier
+                    </button>
                     <button
                       type="button"
                       className="btn btn-ghost btn-sm text-error"

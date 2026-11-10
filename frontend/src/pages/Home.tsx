@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { deleteExpense, getCategories, getExpenses } from "../api/client";
+import ExpenseEditDialog from "../components/ExpenseEditDialog";
 import ExpenseForm from "../components/ExpenseForm";
 import ExpenseList from "../components/ExpenseList";
 import MonthSummary from "../components/MonthSummary";
@@ -20,7 +21,7 @@ function byMostRecent(a: Expense, b: Expense): number {
  * @remarks
  * This page owns the data (expenses + categories) and passes it down to the
  * components through props; the components report changes back through
- * callbacks (onCreated, onDelete). Data flows down, events flow up.
+ * callbacks (onSaved, onEdit, onDelete). Data flows down, events flow up.
  * Code is written in English, but every text shown to users is in French.
  */
 function Home() {
@@ -28,6 +29,8 @@ function Home() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  /** Expense currently being edited in the dialog, or null when the dialog is closed. */
+  const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
 
   // Initial load, once when the page appears ([] = no dependency)
   useEffect(() => {
@@ -60,6 +63,16 @@ function Home() {
     setExpenses((prev) => [expense, ...prev].sort(byMostRecent));
   }
 
+  /** Replaces the edited expense in the list, then closes the dialog. */
+  function handleUpdated(updated: Expense) {
+    // map: same list, except the row with the same id, which is replaced.
+    // Sorted again because the date may have changed.
+    setExpenses((prev) =>
+      prev.map((expense) => (expense.id === updated.id ? updated : expense)).sort(byMostRecent),
+    );
+    setEditingExpense(null);
+  }
+
   /** Deletes on the server first, then removes the row from the screen. */
   async function handleDelete(id: number) {
     try {
@@ -89,11 +102,22 @@ function Home() {
         ) : (
           <>
             <MonthSummary expenses={expenses} />
-            <ExpenseForm categories={categories} onCreated={handleCreated} />
-            <ExpenseList expenses={expenses} onDelete={handleDelete} />
+            <ExpenseForm categories={categories} onSaved={handleCreated} />
+            <ExpenseList expenses={expenses} onEdit={setEditingExpense} onDelete={handleDelete} />
           </>
         )}
       </div>
+
+      {/* key: a new dialog (with fresh fields) for each edited expense */}
+      {editingExpense && (
+        <ExpenseEditDialog
+          key={editingExpense.id}
+          expense={editingExpense}
+          categories={categories}
+          onSaved={handleUpdated}
+          onClose={() => setEditingExpense(null)}
+        />
+      )}
     </main>
   );
 }
