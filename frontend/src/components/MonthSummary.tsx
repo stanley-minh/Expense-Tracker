@@ -17,6 +17,10 @@ function MonthSummary({ expenses }: MonthSummaryProps) {
   // Sum of every amount: reduce starts at 0 and adds each amount (integers: exact)
   const total = monthExpenses.reduce((sum, expense) => sum + expense.amount_cents, 0);
 
+  // Same sum, restricted to the validated expenses
+  const validatedExpenses = monthExpenses.filter((expense) => expense.is_validated);
+  const validatedTotal = validatedExpenses.reduce((sum, expense) => sum + expense.amount_cents, 0);
+
   // Totals per category name: { "Agape": 4250, "Hygiène": 1890, ... }
   const totalsByCategory = monthExpenses.reduce<Record<string, number>>((totals, expense) => {
     const name = expense.category_name;
@@ -34,7 +38,9 @@ function MonthSummary({ expenses }: MonthSummaryProps) {
           <p className="text-sm text-base-content/60">Total de {currentMonthLabel()}</p>
           <p className="text-4xl font-bold text-primary tabular-nums">{formatCents(total)}</p>
           <p className="text-sm text-base-content/60">
-            {monthExpenses.length} dépense{monthExpenses.length > 1 ? "s" : ""}
+            {monthExpenses.length} dépense{monthExpenses.length > 1 ? "s" : ""}, dont{" "}
+            {validatedExpenses.length} validée{validatedExpenses.length > 1 ? "s" : ""} (
+            {formatCents(validatedTotal)})
           </p>
         </div>
 

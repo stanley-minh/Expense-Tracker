@@ -2,6 +2,8 @@
 
 namespace App\Controllers;
 
+use App\Core\Auth;
+use App\Core\HttpException;
 use App\Core\Request;
 use App\Core\Response;
 use App\Models\ModelCategory;
@@ -9,7 +11,10 @@ use App\Models\ModelExpense;
 use App\Validators\ExpenseValidator;
 
 /**
- * Handles the /api/expenses routes (full CRUD).
+ * Handles the /api/expenses routes (full CRUD + validation).
+ *
+ * Every route requires a logged-in user (401 otherwise) and only works on
+ * that user's own expenses: another user's expense answers 404.
  *
  * HTTP status codes used:
  *   200 OK                    read / update succeeded
@@ -31,11 +36,13 @@ final class ExpenseController extends Controller
     }
 
     /**
-     * GET /api/expenses — lists every expense.
+     * GET /api/expenses — lists every expense of the logged-in user.
      */
     public function index(): void
     {
-        Response::json($this->getModel()->findAll());
+        $userId = Auth::requireUserId();
+
+        Response::json($this->getModel()->findAll($userId));
     }
 
     /**
@@ -45,7 +52,8 @@ final class ExpenseController extends Controller
      */
     public function show(int $id): void
     {
-        $expense = $this->getModel()->findById($id);
+        $userId = Auth::requireUserId();
+        $expense = $this->getModel()->findById($id, $userId);
 
         if ($expense === null) {
             Response::json(['error' => 'Dépense introuvable.'], 404);
@@ -62,16 +70,18 @@ final class ExpenseController extends Controller
      */
     public function store(): void
     {
+        $userId = Auth::requireUserId();
+
         $data = $this->readValidBody();
         if ($data === null) {
             return; // error response already sent
         }
 
-        $id = $this->getModel()->create($data);
+        $id = $this->getModel()->create($data, $userId);
 
         // 201 + Location: tells the client where the new resource lives
         Response::json(
-            $this->getModel()->findById($id),
+            $this->getModel()->findById($id, $userId),
             201,
             ['Location' => '/api/expenses/' . $id]
         );
@@ -84,8 +94,10 @@ final class ExpenseController extends Controller
      */
     public function update(int $id): void
     {
+        $userId = Auth::requireUserId();
+
         // 404 first: no need to validate a body for a resource that does not exist
-        if ($this->getModel()->findById($id) === null) {
+        if ($this->getModel()->findById($id, $userId) === null) {
             Response::json(['error' => 'Dépense introuvable.'], 404);
             return;
         }
@@ -95,9 +107,42 @@ final class ExpenseController extends Controller
             return;
         }
 
-        $this->getModel()->update($id, $data);
+        $this->getModel()->update($id, $userId, $data);
 
-        Response::json($this->getModel()->findById($id));
+        Response::json($this->getModel()->findById($id, $userId));
+    }
+
+    /**
+     * PATCH /api/expenses/{id}/validation — checks or unchecks "validated".
+     * Body: {"is_validated": true}
+     *
+     * PATCH (not PUT): only ONE field of the expense changes, the others stay as they are.
+     *
+     * @param int $id Expense id (from the URL)
+     */
+    public function validate(int $id): void
+    {
+        $userId = Auth::requireUserId();
+
+        if ($this->getModel()->findById($id, $userId) === null) {
+            Response::json(['error' => 'Dépense introuvable.'], 404);
+            return;
+        }
+
+        $body = Request::json();
+        if ($body === null) {
+            throw new HttpException(400, 'Le corps de la requête doit être un objet JSON.');
+        }
+
+        // is_bool: only true / false are accepted (not 1, "true", "oui"...)
+        if (!is_bool($body['is_validated'] ?? null)) {
+            Response::json(['errors' => ['is_validated' => 'La valeur doit être true ou false.']], 422);
+            return;
+        }
+
+        $this->getModel()->setValidated($id, $userId, $body['is_validated']);
+
+        Response::json($this->getModel()->findById($id, $userId));
     }
 
     /**
@@ -107,7 +152,9 @@ final class ExpenseController extends Controller
      */
     public function destroy(int $id): void
     {
-        if (!$this->getModel()->delete($id)) {
+        $userId = Auth::requireUserId();
+
+        if (!$this->getModel()->delete($id, $userId)) {
             Response::json(['error' => 'Dépense introuvable.'], 404);
             return;
         }

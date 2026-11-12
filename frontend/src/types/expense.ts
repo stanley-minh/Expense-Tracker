@@ -25,6 +25,10 @@ export interface Expense {
   amount_cents: number;
   /** Date in "YYYY-MM-DD" format. */
   spent_at: string;
+  /** Checked by the accountant once the expense has been analyzed. */
+  is_validated: boolean;
+  /** When it was validated ("YYYY-MM-DD HH:MM:SS"), null when not validated. */
+  validated_at: string | null;
 }
 
 /** Body sent to POST /api/expenses and PUT /api/expenses/{id}. */

@@ -11,3 +11,7 @@ define('BDD_HOST', getenv('DB_HOST'));
 define('BDD_NAME', getenv('DB_NAME'));
 define('BDD_USERNAME', getenv('DB_USER'));
 define('BDD_PASSWORD', getenv('DB_PASSWORD'));
+
+// Code the church gives to its accountants so they can create an account.
+// Empty or missing = registrations closed (AuthController::register answers 403).
+define('REGISTRATION_CODE', (string) getenv('REGISTRATION_CODE'));
