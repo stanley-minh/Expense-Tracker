@@ -53,8 +53,9 @@ Expense-Tracker/
         ├── auth/         AuthContext, AuthProvider, useAuth (logged-in user)
         ├── layouts/      ProtectedLayout (logged in), GuestLayout (login, register)
         ├── components/   MonthSummary, ExpenseForm, ExpenseList, ExpenseEditDialog,
-        │                 Navbar, TextField
-        ├── pages/        Home (owns the data), Login, Register, Account
+        │                 RecentExpenses, Navbar, TextField
+        ├── hooks/        useExpenses (loads expenses + categories, shared by the pages)
+        ├── pages/        Home ("Saisie"), Recap ("Récapitulatif"), Login, Register, Account
         ├── types/        Expense, Category, ExpenseInput, User
         └── utils/        money (cents <-> euros), date
 ```
@@ -93,6 +94,11 @@ docker compose exec -T database sh -c 'mysql -u"$MYSQL_USER" -p"$MYSQL_PASSWORD"
   < backend/database/migrations/2026_11_09_add_categories.sql
 ```
 
+| Migration | Content |
+| --- | --- |
+| `2026_11_09_add_categories.sql` | categories (for a database created before the accounts feature) |
+| `2026_11_12_add_participants_count.sql` | `expenses.participants_count` (keeps existing accounts and expenses) |
+
 The accounts feature (users table, `expenses.user_id`) has no migration: the app
 was not in production yet, so the development database is simply recreated
 (`docker compose down -v && docker compose up -d`). From the first production
@@ -106,6 +112,13 @@ by the accountant and are out of scope.
 
 Each accountant has their own account and **only sees their own expenses**.
 Once an expense has been analyzed, they check it as **validated**.
+
+Pages (French interface):
+- **Saisie** (`/`): month summary, entry form, last 5 entries.
+- **Récapitulatif** (`/recap`): table of every expense with the "Validée"
+  checkbox, edit and delete; filter tabs *Toutes / À valider / Validées*,
+  kept in the URL (`/recap?statut=a-valider`).
+- **Mon compte** (`/account`), **Connexion** (`/login`), **Créer un compte** (`/register`).
 
 **Language**: the code, comments and documentation are in English; everything
 shown to users (interface, API error messages, category names) is in French.
@@ -126,7 +139,9 @@ shown to users (interface, API error messages, category names) is in French.
   `password_hash()`, the password itself is never stored)
 - **expenses**: owner (`user_id`, foreign key, `ON DELETE CASCADE`), label,
   category (foreign key), `category_detail` (free text, required only with the
-  `other` category), amount in cents, date, `is_validated` + `validated_at`
+  `other` category), amount in cents, `participants_count` (number of people
+  the expense is shared between, 1 to 1000, default 1), date,
+  `is_validated` + `validated_at`
 
 ## Authentication
 
@@ -170,7 +185,7 @@ Routes for a logged-in user (`401` otherwise), on **their own data only**
 Request body (POST / PUT):
 
 ```json
-{ "label": "Repas partagé", "category_id": 2, "category_detail": null, "amount_cents": 4250, "spent_at": "2026-11-02" }
+{ "label": "Repas partagé", "category_id": 2, "category_detail": null, "amount_cents": 4250, "participants_count": 25, "spent_at": "2026-11-02" }
 ```
 
 Errors: `400` body is not a JSON object · `401` not logged in ·
@@ -181,6 +196,10 @@ Errors: `400` body is not a JSON object · `401` not logged in ·
 With the `other` category (Autre), `category_detail` is required, e.g.
 `"category_id": 6, "category_detail": "Décoration"`. With any other category,
 `category_detail` is ignored and stored as `null`.
+
+`participants_count` is optional (default `1`). The interface splits the
+amount to the exact cent: 100,00 € for 3 people gives
+`1 × 33,34 € + 2 × 33,33 €` (Euclidean division, see `frontend/src/utils/money.ts`).
 
 Amounts are stored and returned in **cents** (`amount_cents`, integer) to
 avoid floating-point rounding errors. A single expense is limited to
@@ -199,6 +218,8 @@ avoid floating-point rounding errors. A single expense is limited to
 - [x] Accounts: registration with a code, login (PHP session), edit and delete account
 - [x] Each accountant only sees their own expenses
 - [x] Validation checkbox on expenses
+- [x] Split an expense between several people (exact to the cent)
+- [x] Two pages: "Saisie" (entry form) and "Récapitulatif" (table to validate, filter by status)
 - [ ] Login rate limiting (Redis)
 - [ ] Redis (cache, login rate limiting)
 - [ ] Production deployment (VPS, HTTPS, CI/CD)
