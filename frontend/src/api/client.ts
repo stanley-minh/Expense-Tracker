@@ -1,4 +1,5 @@
-import type { Category, Expense, ExpenseInput, ValidationErrors } from "../types/expense";
+import type { Category, Expense, ExpenseInput } from "../types/expense";
+import type { AccountUpdateInput, RegisterInput, User } from "../types/user";
 
 /**
  * Base path of the API. It is relative: in development Vite forwards /api to the
@@ -8,9 +9,10 @@ const API_URL = "/api";
 
 /** Thrown when the API answers 422: carries one message per invalid field. */
 export class ValidationError extends Error {
-  readonly errors: ValidationErrors;
+  /** Field name => message, e.g. { email: "Saisissez une adresse e-mail valide." } */
+  readonly errors: Record<string, string>;
 
-  constructor(errors: ValidationErrors) {
+  constructor(errors: Record<string, string>) {
     super("Les données envoyées sont invalides.");
     this.name = "ValidationError";
     this.errors = errors;
@@ -29,7 +31,22 @@ export class ApiError extends Error {
 }
 
 /**
+ * Function called when the API answers 401 (session expired, account deleted...).
+ * The AuthProvider registers it to send the user back to the login page.
+ */
+let unauthorizedHandler: (() => void) | null = null;
+
+/** Registers the function to call on any 401 answer (see AuthProvider). */
+export function setUnauthorizedHandler(handler: (() => void) | null): void {
+  unauthorizedHandler = handler;
+}
+
+/**
  * Sends a request to the API and returns the decoded JSON.
+ *
+ * The session cookie is sent automatically: the frontend and the API share the
+ * same origin (Vite proxy in development, nginx in production), and fetch sends
+ * same-origin cookies by default.
  *
  * Centralizes what every call needs: base URL, JSON headers, and turning HTTP
  * errors into exceptions. fetch() itself does NOT throw on 4xx/5xx: it only
@@ -54,6 +71,12 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 
   // .catch: a body that is not JSON (e.g. an nginx HTML error page) becomes null
   const data = await response.json().catch(() => null);
+
+  // 401 on a protected route: the session is no longer valid.
+  // (Not for the login route itself, where 401 just means "wrong password".)
+  if (response.status === 401 && path !== "/auth/login") {
+    unauthorizedHandler?.();
+  }
 
   if (response.status === 422) {
     throw new ValidationError(data?.errors ?? {});
@@ -85,7 +108,50 @@ export function updateExpense(id: number, input: ExpenseInput): Promise<Expense>
   return request<Expense>(`/expenses/${id}`, { method: "PUT", body: JSON.stringify(input) });
 }
 
+/** PATCH /api/expenses/{id}/validation — checks or unchecks "validated". */
+export function setExpenseValidated(id: number, isValidated: boolean): Promise<Expense> {
+  return request<Expense>(`/expenses/${id}/validation`, {
+    method: "PATCH",
+    body: JSON.stringify({ is_validated: isValidated }),
+  });
+}
+
 /** DELETE /api/expenses/{id} */
 export function deleteExpense(id: number): Promise<void> {
   return request<void>(`/expenses/${id}`, { method: "DELETE" });
+}
+
+// --- Authentication and account ---
+
+/** POST /api/auth/register — creates the account and logs the user in. */
+export function register(input: RegisterInput): Promise<User> {
+  return request<User>("/auth/register", { method: "POST", body: JSON.stringify(input) });
+}
+
+/** POST /api/auth/login */
+export function login(email: string, password: string): Promise<User> {
+  return request<User>("/auth/login", {
+    method: "POST",
+    body: JSON.stringify({ email, password }),
+  });
+}
+
+/** POST /api/auth/logout */
+export function logout(): Promise<void> {
+  return request<void>("/auth/logout", { method: "POST" });
+}
+
+/** GET /api/auth/me — the logged-in user (throws ApiError 401 when nobody is logged in). */
+export function getCurrentUser(signal?: AbortSignal): Promise<User> {
+  return request<User>("/auth/me", { signal });
+}
+
+/** PUT /api/account — updates the logged-in user's account. */
+export function updateAccount(input: AccountUpdateInput): Promise<User> {
+  return request<User>("/account", { method: "PUT", body: JSON.stringify(input) });
+}
+
+/** DELETE /api/account — deletes the account and all its expenses. */
+export function deleteAccount(password: string): Promise<void> {
+  return request<void>("/account", { method: "DELETE", body: JSON.stringify({ password }) });
 }

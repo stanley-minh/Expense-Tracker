@@ -6,14 +6,17 @@ interface ExpenseListProps {
   expenses: Expense[];
   /** Called when the user clicks "Modifier" on a row. */
   onEdit: (expense: Expense) => void;
+  /** Called when the user checks / unchecks the "Validée" box of a row. */
+  onToggleValidated: (expense: Expense) => void;
   /** Called when the user confirms the deletion of an expense. */
   onDelete: (id: number) => void;
 }
 
 /**
- * Table of every expense, most recent first, with edit and delete buttons per row.
+ * Table of every expense, most recent first, with a "Validée" checkbox and
+ * edit / delete buttons per row.
  */
-function ExpenseList({ expenses, onEdit, onDelete }: ExpenseListProps) {
+function ExpenseList({ expenses, onEdit, onToggleValidated, onDelete }: ExpenseListProps) {
   if (expenses.length === 0) {
     return (
       <section className="card bg-base-100 shadow">
@@ -44,6 +47,7 @@ function ExpenseList({ expenses, onEdit, onDelete }: ExpenseListProps) {
                 <th>Libellé</th>
                 <th>Catégorie</th>
                 <th className="text-right">Montant</th>
+                <th className="text-center">Validée</th>
                 <th>
                   <span className="sr-only">Actions</span>
                 </th>
@@ -63,6 +67,15 @@ function ExpenseList({ expenses, onEdit, onDelete }: ExpenseListProps) {
                   {/* tabular-nums: every digit has the same width, so amounts line up */}
                   <td className="text-right whitespace-nowrap tabular-nums">
                     {formatCents(expense.amount_cents)}
+                  </td>
+                  <td className="text-center">
+                    <input
+                      type="checkbox"
+                      className="checkbox checkbox-success checkbox-sm"
+                      checked={expense.is_validated}
+                      onChange={() => onToggleValidated(expense)}
+                      aria-label={`Dépense « ${expense.label} » validée`}
+                    />
                   </td>
                   <td className="text-right whitespace-nowrap">
                     <button

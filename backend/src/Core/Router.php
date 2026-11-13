@@ -54,6 +54,17 @@ final class Router
     }
 
     /**
+     * Registers a PATCH route (partial update: only some fields change).
+     *
+     * @param string                            $path    Path pattern
+     * @param array{0: class-string, 1: string} $handler [ControllerClass::class, 'method']
+     */
+    public function patch(string $path, array $handler): void
+    {
+        $this->add('PATCH', $path, $handler);
+    }
+
+    /**
      * Registers a DELETE route.
      *
      * @param string                            $path    Path pattern
