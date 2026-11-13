@@ -1,6 +1,6 @@
 import type { Expense } from "../types/expense";
 import { formatDate } from "../utils/date";
-import { formatCents } from "../utils/money";
+import { describeShares, formatCents } from "../utils/money";
 
 interface ExpenseListProps {
   expenses: Expense[];
@@ -20,9 +20,7 @@ function ExpenseList({ expenses, onEdit, onToggleValidated, onDelete }: ExpenseL
   if (expenses.length === 0) {
     return (
       <section className="card bg-base-100 shadow">
-        <div className="card-body text-center text-base-content/60">
-          Aucune dépense enregistrée pour le moment.
-        </div>
+        <div className="card-body text-center text-base-content/60">Aucune dépense à afficher.</div>
       </section>
     );
   }
@@ -67,6 +65,12 @@ function ExpenseList({ expenses, onEdit, onToggleValidated, onDelete }: ExpenseL
                   {/* tabular-nums: every digit has the same width, so amounts line up */}
                   <td className="text-right whitespace-nowrap tabular-nums">
                     {formatCents(expense.amount_cents)}
+                    {expense.participants_count > 1 && (
+                      <span className="block text-xs text-base-content/60">
+                        {expense.participants_count} pers. :{" "}
+                        {describeShares(expense.amount_cents, expense.participants_count)}
+                      </span>
+                    )}
                   </td>
                   <td className="text-center">
                     <input

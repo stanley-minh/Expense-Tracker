@@ -2,7 +2,7 @@ import { useId, useState } from "react";
 import { createExpense, updateExpense, ValidationError } from "../api/client";
 import type { Category, Expense, ExpenseInput, ValidationErrors } from "../types/expense";
 import { todayIso } from "../utils/date";
-import { centsToInputValue, parseEurosToCents } from "../utils/money";
+import { centsToInputValue, describeShares, parseEurosToCents } from "../utils/money";
 
 interface ExpenseFormProps {
   /** Categories for the select, loaded by the parent page. */
@@ -38,6 +38,8 @@ function ExpenseForm({ categories, expense, onSaved, onCancel }: ExpenseFormProp
   /** Amount as typed by the user, in euros ("12,50"). */
   const [amount, setAmount] = useState(expense ? centsToInputValue(expense.amount_cents) : "");
   const [spentAt, setSpentAt] = useState(expense?.spent_at ?? todayIso());
+  /** Number of people, as typed (a string, like every input value). */
+  const [participants, setParticipants] = useState(String(expense?.participants_count ?? 1));
 
   /** Field errors (from the API or from the local amount check). */
   const [errors, setErrors] = useState<ValidationErrors>({});
@@ -52,6 +54,15 @@ function ExpenseForm({ categories, expense, onSaved, onCancel }: ExpenseFormProp
   // The "other" category is detected by its slug, never by its id or its name
   const selectedCategory = categories.find((category) => category.id === Number(categoryId));
   const isOther = selectedCategory?.slug === "other";
+
+  // Live preview of the split, computed at each render from the current inputs.
+  // Shown only when the amount is valid and there is more than 1 person.
+  const previewCents = parseEurosToCents(amount);
+  const previewPeople = Number(participants);
+  const sharePreview =
+    previewCents !== null && Number.isInteger(previewPeople) && previewPeople > 1
+      ? describeShares(previewCents, previewPeople)
+      : null;
 
   async function handleSubmit(event: React.SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -70,6 +81,8 @@ function ExpenseForm({ categories, expense, onSaved, onCancel }: ExpenseFormProp
       category_id: Number(categoryId), // "" becomes 0: the API answers "Choisissez une catégorie"
       category_detail: isOther ? categoryDetail : null,
       amount_cents: amountCents,
+      // Number("") = 0 and Number("2.5") = 2.5: the API answers 422 with a clear message
+      participants_count: Number(participants),
       spent_at: spentAt,
     };
 
@@ -85,6 +98,7 @@ function ExpenseForm({ categories, expense, onSaved, onCancel }: ExpenseFormProp
         setLabel("");
         setAmount("");
         setCategoryDetail("");
+        setParticipants("1");
       }
     } catch (error) {
       if (error instanceof ValidationError) {
@@ -162,7 +176,7 @@ function ExpenseForm({ categories, expense, onSaved, onCancel }: ExpenseFormProp
           </fieldset>
         )}
 
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid gap-4 sm:grid-cols-3">
           <fieldset className="fieldset">
             <label className="fieldset-legend" htmlFor={`${idPrefix}-amount`}>
               Montant (€)
@@ -180,6 +194,34 @@ function ExpenseForm({ categories, expense, onSaved, onCancel }: ExpenseFormProp
               aria-invalid={errors.amount_cents !== undefined}
             />
             {errors.amount_cents && <p className="label text-error">{errors.amount_cents}</p>}
+          </fieldset>
+
+          <fieldset className="fieldset">
+            <label className="fieldset-legend" htmlFor={`${idPrefix}-participants`}>
+              Nombre de personnes
+            </label>
+            {/* type="number" is fine here: whole numbers only, no comma issue */}
+            <input
+              id={`${idPrefix}-participants`}
+              type="number"
+              min={1}
+              max={1000}
+              step={1}
+              className={`input w-full ${errors.participants_count ? "input-error" : ""}`}
+              value={participants}
+              onChange={(event) => setParticipants(event.target.value)}
+              aria-invalid={errors.participants_count !== undefined}
+              aria-describedby={sharePreview ? `${idPrefix}-share-preview` : undefined}
+            />
+            {errors.participants_count ? (
+              <p className="label text-error">{errors.participants_count}</p>
+            ) : (
+              sharePreview && (
+                <p id={`${idPrefix}-share-preview`} className="label" aria-live="polite">
+                  Soit {sharePreview}
+                </p>
+              )
+            )}
           </fieldset>
 
           <fieldset className="fieldset">

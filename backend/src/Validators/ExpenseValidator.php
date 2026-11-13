@@ -27,6 +27,9 @@ final class ExpenseValidator
     /** Max length of the free-text category (VARCHAR(100) column). */
     private const MAX_DETAIL_LENGTH = 100;
 
+    /** Number of people an expense can be shared between (same limit as the CHECK in MySQL). */
+    private const MAX_PARTICIPANTS = 1000;
+
     /**
      * Checks every field and returns the list of errors.
      *
@@ -75,6 +78,13 @@ final class ExpenseValidator
             $errors['amount_cents'] = 'Le montant doit être compris entre 0,01 € et 10 000,00 €.';
         }
 
+        // participants_count: optional (1 = not shared), integer between 1 and 1000
+        $participants = $data['participants_count'] ?? 1;
+        if (!is_int($participants) || $participants < 1 || $participants > self::MAX_PARTICIPANTS) {
+            $errors['participants_count'] = 'Le nombre de personnes doit être un entier entre 1 et '
+                . self::MAX_PARTICIPANTS . '.';
+        }
+
         // spent_at: real calendar date in YYYY-MM-DD format
         $date = $data['spent_at'] ?? null;
         if (!is_string($date) || !self::isValidDate($date)) {
@@ -93,18 +103,19 @@ final class ExpenseValidator
      *
      * @param array<string, mixed> $data          Decoded JSON body
      * @param array<int, string>   $categorySlugs Existing categories, id => slug
-     * @return array{label: string, category_id: int, category_detail: ?string, amount_cents: int, spent_at: string}
+     * @return array{label: string, category_id: int, category_detail: ?string, amount_cents: int, participants_count: int, spent_at: string}
      */
     public static function clean(array $data, array $categorySlugs): array
     {
         $isOther = $categorySlugs[$data['category_id']] === self::OTHER_CATEGORY_SLUG;
 
         return [
-            'label'           => trim($data['label']),
-            'category_id'     => $data['category_id'],
-            'category_detail' => $isOther ? trim($data['category_detail']) : null,
-            'amount_cents'    => $data['amount_cents'],
-            'spent_at'        => $data['spent_at'],
+            'label'              => trim($data['label']),
+            'category_id'        => $data['category_id'],
+            'category_detail'    => $isOther ? trim($data['category_detail']) : null,
+            'amount_cents'       => $data['amount_cents'],
+            'participants_count' => $data['participants_count'] ?? 1, // absent = not shared
+            'spent_at'           => $data['spent_at'],
         ];
     }
 

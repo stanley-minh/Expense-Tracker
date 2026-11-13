@@ -23,6 +23,8 @@ export interface Expense {
   category_detail: string | null;
   /** Integer amount in cents (4250 = 42,50 €). */
   amount_cents: number;
+  /** Number of people the expense is shared between (1 = not shared). */
+  participants_count: number;
   /** Date in "YYYY-MM-DD" format. */
   spent_at: string;
   /** Checked by the accountant once the expense has been analyzed. */
@@ -37,6 +39,7 @@ export interface ExpenseInput {
   category_id: number;
   category_detail: string | null;
   amount_cents: number;
+  participants_count: number;
   spent_at: string;
 }
 
