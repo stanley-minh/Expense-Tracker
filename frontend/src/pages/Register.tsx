@@ -59,7 +59,7 @@ function Register() {
   return (
     <form onSubmit={handleSubmit} className="card w-full max-w-md bg-base-100 shadow" noValidate>
       <div className="card-body">
-        <h1 className="card-title text-2xl">Créer un compte</h1>
+        <h1 className="card-title justify-center text-2xl">Créer un compte</h1>
 
         <TextField
           label="Nom"
@@ -103,7 +103,7 @@ function Register() {
         />
 
         {formError && (
-          <div role="alert" className="alert alert-error">
+          <div role="alert" className="alert alert-error justify-center text-center">
             {formError}
           </div>
         )}
