@@ -65,7 +65,9 @@ final class ExpenseController extends Controller
 
     /**
      * POST /api/expenses — creates an expense.
-     * Body: {"label": "...", "category_id": 1, "category_detail": null, "amount_cents": 1234, "spent_at": "YYYY-MM-DD"}
+     * Body: {"label": "...", "category_id": 1, "category_detail": null, "amount_cents": 1234,
+     *        "participants_count": 1, "spent_at": "YYYY-MM-DD"}
+     * participants_count is optional (default 1 = not shared).
      * category_detail is only required (and only kept) for the "other" (Autre) category.
      */
     public function store(): void
@@ -166,7 +168,7 @@ final class ExpenseController extends Controller
      * Reads and validates the JSON body shared by store() and update().
      * Sends the 400 / 422 error response itself when something is wrong.
      *
-     * @return array{label: string, category_id: int, category_detail: ?string, amount_cents: int, spent_at: string}|null
+     * @return array{label: string, category_id: int, category_detail: ?string, amount_cents: int, participants_count: int, spent_at: string}|null
      *         Clean data, or null if an error response was sent
      */
     private function readValidBody(): ?array

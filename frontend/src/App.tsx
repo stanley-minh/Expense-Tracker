@@ -6,6 +6,7 @@ import ProtectedLayout from "./layouts/ProtectedLayout";
 import Account from "./pages/Account";
 import Home from "./pages/Home";
 import Login from "./pages/Login";
+import Recap from "./pages/Recap";
 import Register from "./pages/Register";
 
 /**
@@ -26,6 +27,7 @@ function App() {
 
       <Route element={<ProtectedLayout />}>
         <Route path="/" element={<Home />} />
+        <Route path="/recap" element={<Recap />} />
         <Route path="/account" element={<Account />} />
       </Route>
 

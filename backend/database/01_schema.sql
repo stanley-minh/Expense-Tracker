@@ -39,6 +39,9 @@ CREATE TABLE IF NOT EXISTS expenses (
     category_id   TINYINT UNSIGNED NOT NULL,      -- same type as categories.id (required for a foreign key)
     category_detail VARCHAR(100)   NULL,          -- free text, only for the "other" category ("Autre : ...")
     amount_cents  INT UNSIGNED     NOT NULL,      -- cents (integer): no float rounding errors
+    -- Number of people the expense is shared between (1 = not shared).
+    -- SMALLINT UNSIGNED: 2 bytes, 0 to 65 535 — far more than needed, the CHECK sets the real limit.
+    participants_count SMALLINT UNSIGNED NOT NULL DEFAULT 1,
     spent_at      DATE             NOT NULL,
     -- BOOLEAN is an alias of TINYINT(1) in MySQL: 0 = false, 1 = true
     is_validated  BOOLEAN          NOT NULL DEFAULT FALSE,
@@ -50,6 +53,7 @@ CREATE TABLE IF NOT EXISTS expenses (
     CONSTRAINT chk_category_detail_not_empty CHECK (category_detail IS NULL OR category_detail <> ''),
     -- Business rule: one expense is between 0.01 € and 10,000.00 € (1,000,000 cents)
     CONSTRAINT chk_amount_range CHECK (amount_cents BETWEEN 1 AND 1000000),
+    CONSTRAINT chk_participants_range CHECK (participants_count BETWEEN 1 AND 1000),
 
     -- Foreign key: category_id must exist in categories.id.
     -- RESTRICT: a category that still has expenses cannot be deleted.

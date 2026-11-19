@@ -49,3 +49,51 @@ export function parseEurosToCents(input: string): number | null {
 
   return euros * 100 + cents; // only integers: always exact
 }
+
+/** One group of identical shares, e.g. { amountCents: 3333, count: 2 } = "2 × 33,33 €". */
+export interface ShareGroup {
+  amountCents: number;
+  count: number;
+}
+
+/**
+ * Splits an amount between several people, to the exact cent.
+ *
+ * Euclidean division of the total by the number of people:
+ *   total = quotient × people + remainder   (0 <= remainder < people)
+ * Everyone pays the quotient, and the remainder (fewer cents than people) is
+ * given one cent each to the first "remainder" people. The shares therefore
+ * always add up EXACTLY to the total, and differ by 1 cent at most.
+ *
+ * @example splitCents(10000, 3) // [{ amountCents: 3334, count: 1 }, { amountCents: 3333, count: 2 }]
+ * @example splitCents(12000, 30) // [{ amountCents: 400, count: 30 }]
+ * @returns The groups of identical shares, largest share first (1 group when it divides evenly)
+ */
+export function splitCents(totalCents: number, people: number): ShareGroup[] {
+  const quotient = Math.floor(totalCents / people);
+  const remainder = totalCents % people;
+
+  if (remainder === 0) {
+    return [{ amountCents: quotient, count: people }];
+  }
+
+  return [
+    { amountCents: quotient + 1, count: remainder }, // these people pay 1 extra cent
+    { amountCents: quotient, count: people - remainder },
+  ];
+}
+
+/**
+ * Describes the shares in French.
+ * @example describeShares(10000, 3) // "1 × 33,34 € + 2 × 33,33 €"
+ * @example describeShares(12000, 30) // "4,00 € par personne"
+ */
+export function describeShares(totalCents: number, people: number): string {
+  const groups = splitCents(totalCents, people);
+
+  if (groups.length === 1) {
+    return `${formatCents(groups[0].amountCents)} par personne`;
+  }
+
+  return groups.map((group) => `${group.count} × ${formatCents(group.amountCents)}`).join(" + ");
+}
