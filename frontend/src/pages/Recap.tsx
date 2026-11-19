@@ -3,8 +3,14 @@ import { useSearchParams } from "react-router";
 import ExpenseEditDialog from "../components/ExpenseEditDialog";
 import ExpenseList from "../components/ExpenseList";
 import { useExpenses } from "../hooks/useExpenses";
+import { useToast } from "../toast/useToast";
 import type { Expense } from "../types/expense";
 import { formatCents } from "../utils/money";
+
+/** Sum of the amounts of a list of expenses, in cents (integers: always exact). */
+function sumCents(expenses: Expense[]): number {
+  return expenses.reduce((sum, expense) => sum + expense.amount_cents, 0);
+}
 
 /** The three views of the table; the value is stored in the URL (?statut=...). */
 const FILTERS = [
@@ -29,6 +35,7 @@ function Recap() {
     useExpenses();
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
+  const { showToast } = useToast();
 
   // Unknown or missing value in the URL: fall back to "toutes"
   const requested = searchParams.get("statut");
@@ -36,12 +43,13 @@ function Recap() {
     ? (requested as Filter)
     : "toutes";
 
-  // Counts for the tab labels, computed on every expense
-  const toValidateCount = expenses.filter((expense) => !expense.is_validated).length;
+  // Counts for the tab labels and the key figures, computed on every expense
+  const toValidate = expenses.filter((expense) => !expense.is_validated);
+  const validated = expenses.filter((expense) => expense.is_validated);
   const counts: Record<Filter, number> = {
     toutes: expenses.length,
-    "a-valider": toValidateCount,
-    validees: expenses.length - toValidateCount,
+    "a-valider": toValidate.length,
+    validees: validated.length,
   };
 
   const visibleExpenses = expenses.filter((expense) => {
@@ -49,11 +57,24 @@ function Recap() {
     if (filter === "validees") return expense.is_validated;
     return true;
   });
-  const visibleTotal = visibleExpenses.reduce((sum, expense) => sum + expense.amount_cents, 0);
 
   function handleUpdated(updated: Expense) {
     replaceExpense(updated);
     setEditingExpense(null);
+    showToast(`« ${updated.label} » a été modifiée.`);
+  }
+
+  async function handleToggleValidated(expense: Expense) {
+    const updated = await toggleValidated(expense);
+    if (updated !== null) {
+      showToast(updated.is_validated ? "Dépense validée." : "Validation retirée.");
+    }
+  }
+
+  async function handleDelete(expense: Expense) {
+    if (await removeExpense(expense.id)) {
+      showToast(`« ${expense.label} » a été supprimée.`);
+    }
   }
 
   return (
@@ -76,9 +97,41 @@ function Recap() {
           </div>
         ) : (
           <>
+            {/* Key figures: the accountant's dashboard. Vertical on phones, in a row from sm */}
+            <div className="stats stats-vertical w-full bg-base-100 shadow sm:stats-horizontal">
+              <div className="stat">
+                <div className="stat-title">Total des dépenses</div>
+                <div className="stat-value text-primary tabular-nums">
+                  {formatCents(sumCents(expenses))}
+                </div>
+                <div className="stat-desc">
+                  {expenses.length} dépense{expenses.length > 1 ? "s" : ""}
+                </div>
+              </div>
+              <div className="stat">
+                <div className="stat-title">À valider</div>
+                <div className="stat-value text-warning tabular-nums">
+                  {formatCents(sumCents(toValidate))}
+                </div>
+                <div className="stat-desc">
+                  {toValidate.length} dépense{toValidate.length > 1 ? "s" : ""}
+                </div>
+              </div>
+              <div className="stat">
+                <div className="stat-title">Validées</div>
+                <div className="stat-value text-success tabular-nums">
+                  {formatCents(sumCents(validated))}
+                </div>
+                <div className="stat-desc">
+                  {validated.length} dépense{validated.length > 1 ? "s" : ""}
+                </div>
+              </div>
+            </div>
+
             <div className="flex flex-wrap items-center justify-between gap-4">
-              {/* Tabs: links that change ?statut= in the URL */}
-              <div role="tablist" className="tabs tabs-box">
+              {/* Tabs: links that change ?statut= in the URL.
+                  overflow-x-auto: on a very narrow screen the tabs scroll instead of overflowing */}
+              <div role="tablist" className="tabs tabs-box max-w-full overflow-x-auto">
                 {FILTERS.map((item) => (
                   <button
                     key={item.value}
@@ -94,15 +147,17 @@ function Recap() {
               </div>
               <p className="text-sm">
                 Total affiché :{" "}
-                <span className="font-semibold tabular-nums">{formatCents(visibleTotal)}</span>
+                <span className="font-semibold tabular-nums">
+                  {formatCents(sumCents(visibleExpenses))}
+                </span>
               </p>
             </div>
 
             <ExpenseList
               expenses={visibleExpenses}
               onEdit={setEditingExpense}
-              onToggleValidated={toggleValidated}
-              onDelete={removeExpense}
+              onToggleValidated={handleToggleValidated}
+              onDelete={handleDelete}
             />
           </>
         )}

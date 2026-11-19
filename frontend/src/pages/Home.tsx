@@ -1,9 +1,8 @@
-import { useState } from "react";
-import { Link } from "react-router";
 import ExpenseForm from "../components/ExpenseForm";
 import MonthSummary from "../components/MonthSummary";
 import RecentExpenses from "../components/RecentExpenses";
 import { useExpenses } from "../hooks/useExpenses";
+import { useToast } from "../toast/useToast";
 import type { Expense } from "../types/expense";
 
 /**
@@ -13,18 +12,19 @@ import type { Expense } from "../types/expense";
  */
 function Home() {
   const { expenses, categories, isLoading, error, addExpense } = useExpenses();
-  /** Label of the last saved expense, for the confirmation message. */
-  const [lastSavedLabel, setLastSavedLabel] = useState<string | null>(null);
+  const { showToast } = useToast();
 
   function handleSaved(expense: Expense) {
     addExpense(expense);
-    setLastSavedLabel(expense.label);
+    // Same confirmation style as on the "Récapitulatif" page; the new expense also
+    // appears right away in "Dernières saisies", which links to the full table
+    showToast(`« ${expense.label} » a été enregistrée.`);
   }
 
   return (
     <main className="p-4 md:p-8">
       <div className="mx-auto max-w-4xl space-y-6">
-        <h1 className="text-3xl font-bold">Saisie des dépenses</h1>
+        <h1 className="text-2xl font-bold md:text-3xl">Saisie des dépenses</h1>
 
         {error && (
           <div role="alert" className="alert alert-error">
@@ -39,19 +39,6 @@ function Home() {
         ) : (
           <>
             <MonthSummary expenses={expenses} />
-
-            {lastSavedLabel && (
-              // role="status": screen readers announce the message without interrupting
-              <div role="status" className="alert alert-success">
-                <span>
-                  « {lastSavedLabel} » a été enregistrée.{" "}
-                  <Link to="/recap" className="link font-semibold">
-                    Voir le récapitulatif
-                  </Link>
-                </span>
-              </div>
-            )}
-
             <ExpenseForm categories={categories} onSaved={handleSaved} />
             <RecentExpenses expenses={expenses} />
           </>

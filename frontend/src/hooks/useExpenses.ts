@@ -66,25 +66,35 @@ export function useExpenses() {
     );
   }
 
-  /** Checks / unchecks "validated" on the server, then shows the row returned by the API. */
-  async function toggleValidated(expense: Expense) {
+  /**
+   * Checks / unchecks "validated" on the server, then shows the row returned by the API.
+   * @returns The updated expense, or null when the request failed (the error is already shown)
+   */
+  async function toggleValidated(expense: Expense): Promise<Expense | null> {
     try {
       const updated = await setExpenseValidated(expense.id, !expense.is_validated);
       setExpenses((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
+      return updated;
     } catch (toggleError) {
       console.error(toggleError);
       setError("Impossible de modifier la validation. Réessayez plus tard.");
+      return null;
     }
   }
 
-  /** Deletes on the server first, then removes the row from the screen. */
-  async function removeExpense(id: number) {
+  /**
+   * Deletes on the server first, then removes the row from the screen.
+   * @returns true when deleted, false when the request failed (the error is already shown)
+   */
+  async function removeExpense(id: number): Promise<boolean> {
     try {
       await deleteExpense(id);
       setExpenses((prev) => prev.filter((expense) => expense.id !== id));
+      return true;
     } catch (deleteError) {
       console.error(deleteError);
       setError("Impossible de supprimer la dépense. Réessayez plus tard.");
+      return false;
     }
   }
 
