@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useSearchParams } from "react-router";
 import ExpenseEditDialog from "../components/ExpenseEditDialog";
 import ExpenseList from "../components/ExpenseList";
+import ParticipantsDialog from "../components/ParticipantsDialog";
 import { useExpenses } from "../hooks/useExpenses";
 import { useToast } from "../toast/useToast";
 import type { Expense } from "../types/expense";
@@ -34,6 +35,14 @@ function Recap() {
   const { expenses, categories, isLoading, error, replaceExpense, toggleValidated, removeExpense } =
     useExpenses();
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
+  /**
+   * Id (not the object) of the expense whose participants are open. The expense
+   * itself is looked up in the list at each render, so the dialog always shows the
+   * latest version (recomputed shares) after each change.
+   */
+  const [participantsExpenseId, setParticipantsExpenseId] = useState<number | null>(null);
+  const participantsExpense =
+    expenses.find((expense) => expense.id === participantsExpenseId) ?? null;
   const [searchParams, setSearchParams] = useSearchParams();
   const { showToast } = useToast();
 
@@ -156,6 +165,7 @@ function Recap() {
             <ExpenseList
               expenses={visibleExpenses}
               onEdit={setEditingExpense}
+              onManageParticipants={(expense) => setParticipantsExpenseId(expense.id)}
               onToggleValidated={handleToggleValidated}
               onDelete={handleDelete}
             />
@@ -171,6 +181,15 @@ function Recap() {
           categories={categories}
           onSaved={handleUpdated}
           onClose={() => setEditingExpense(null)}
+        />
+      )}
+
+      {participantsExpense && (
+        <ParticipantsDialog
+          key={participantsExpense.id}
+          expense={participantsExpense}
+          onChanged={replaceExpense}
+          onClose={() => setParticipantsExpenseId(null)}
         />
       )}
     </main>

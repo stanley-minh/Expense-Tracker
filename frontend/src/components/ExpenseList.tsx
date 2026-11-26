@@ -1,13 +1,44 @@
 import { useState } from "react";
 import type { Expense } from "../types/expense";
 import { formatDate } from "../utils/date";
-import { describeShares, formatCents } from "../utils/money";
+import { formatCents } from "../utils/money";
 import ConfirmDialog from "./ConfirmDialog";
+
+/**
+ * "2/4 ont payé" + a progress bar, or "Non partagée" when nobody shares the expense.
+ * Not exported: only used by ExpenseList (keeps the file's single export a component).
+ */
+function PaymentProgress({ expense }: { expense: Expense }) {
+  const total = expense.participants.length;
+  if (total === 0) {
+    // /60 like the other secondary texts: /50 was 3.4:1 on white, below the 4.5:1 minimum
+    return <span className="text-sm text-base-content/60">Non partagée</span>;
+  }
+
+  const paid = expense.participants.filter((participant) => participant.has_paid).length;
+
+  return (
+    <span className="flex min-w-0 items-center gap-2 text-sm">
+      <span className="whitespace-nowrap">
+        {paid}/{total} {paid > 1 ? "ont payé" : "a payé"}
+      </span>
+      {/* <progress>: native element, read correctly by screen readers ("2 sur 4") */}
+      <progress
+        className={`progress w-16 ${paid === total ? "progress-success" : "progress-warning"}`}
+        value={paid}
+        max={total}
+        aria-label={`${paid} personnes sur ${total} ont payé`}
+      />
+    </span>
+  );
+}
 
 interface ExpenseListProps {
   expenses: Expense[];
   /** Called when the user clicks "Modifier" on a row. */
   onEdit: (expense: Expense) => void;
+  /** Called when the user clicks "Participants" on a row. */
+  onManageParticipants: (expense: Expense) => void;
   /** Called when the user checks / unchecks the "Validée" box of a row. */
   onToggleValidated: (expense: Expense) => void;
   /** Called when the user confirms the deletion of an expense. */
@@ -24,7 +55,13 @@ interface ExpenseListProps {
  * Touch targets are at least 44px high on phones (min-h-11), the WCAG recommendation
  * for fingers.
  */
-function ExpenseList({ expenses, onEdit, onToggleValidated, onDelete }: ExpenseListProps) {
+function ExpenseList({
+  expenses,
+  onEdit,
+  onManageParticipants,
+  onToggleValidated,
+  onDelete,
+}: ExpenseListProps) {
   /** Expense waiting for the user's confirmation in the dialog (null = no dialog). */
   const [expenseToDelete, setExpenseToDelete] = useState<Expense | null>(null);
 
@@ -60,12 +97,17 @@ function ExpenseList({ expenses, onEdit, onToggleValidated, onDelete }: ExpenseL
                 </p>
               </div>
 
-              {expense.participants_count > 1 && (
-                <p className="text-sm text-base-content/70">
-                  {expense.participants_count} pers. :{" "}
-                  {describeShares(expense.amount_cents, expense.participants_count)}
-                </p>
-              )}
+              <div className="flex items-center justify-between gap-2">
+                <PaymentProgress expense={expense} />
+                <button
+                  type="button"
+                  className="btn btn-outline btn-sm min-h-11"
+                  onClick={() => onManageParticipants(expense)}
+                  aria-label={`Participants de ${expense.label}`}
+                >
+                  Participants
+                </button>
+              </div>
 
               <div className="flex items-center justify-between gap-2">
                 {/* The whole label is clickable: a 44px target instead of the small box alone */}
@@ -114,6 +156,7 @@ function ExpenseList({ expenses, onEdit, onToggleValidated, onDelete }: ExpenseL
                   <th>Libellé</th>
                   <th>Catégorie</th>
                   <th className="text-right">Montant</th>
+                  <th>Paiements</th>
                   <th className="text-center">Validée</th>
                   <th>
                     <span className="sr-only">Actions</span>
@@ -134,12 +177,9 @@ function ExpenseList({ expenses, onEdit, onToggleValidated, onDelete }: ExpenseL
                     {/* tabular-nums: every digit has the same width, so amounts line up */}
                     <td className="text-right whitespace-nowrap tabular-nums">
                       {formatCents(expense.amount_cents)}
-                      {expense.participants_count > 1 && (
-                        <span className="block text-xs text-base-content/60">
-                          {expense.participants_count} pers. :{" "}
-                          {describeShares(expense.amount_cents, expense.participants_count)}
-                        </span>
-                      )}
+                    </td>
+                    <td>
+                      <PaymentProgress expense={expense} />
                     </td>
                     <td className="text-center">
                       <input
@@ -151,6 +191,14 @@ function ExpenseList({ expenses, onEdit, onToggleValidated, onDelete }: ExpenseL
                       />
                     </td>
                     <td className="text-right whitespace-nowrap">
+                      <button
+                        type="button"
+                        className="btn btn-ghost btn-sm"
+                        onClick={() => onManageParticipants(expense)}
+                        aria-label={`Participants de ${expense.label}`}
+                      >
+                        Participants
+                      </button>
                       <button
                         type="button"
                         className="btn btn-ghost btn-sm"

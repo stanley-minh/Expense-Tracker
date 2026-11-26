@@ -16,6 +16,7 @@ use App\Controllers\AccountController;
 use App\Controllers\AuthController;
 use App\Controllers\CategoryController;
 use App\Controllers\ExpenseController;
+use App\Controllers\ParticipantController;
 use App\Core\HttpException;
 use App\Core\Response;
 use App\Core\Router;
@@ -40,6 +41,11 @@ $router->post('/api/expenses', [ExpenseController::class, 'store']);
 $router->put('/api/expenses/{id}', [ExpenseController::class, 'update']);
 $router->delete('/api/expenses/{id}', [ExpenseController::class, 'destroy']);
 $router->patch('/api/expenses/{id}/validation', [ExpenseController::class, 'validate']);
+
+// Participants of a shared expense (the {names} become named arguments: id, participantId)
+$router->post('/api/expenses/{id}/participants', [ParticipantController::class, 'store']);
+$router->patch('/api/expenses/{id}/participants/{participantId}/payment', [ParticipantController::class, 'payment']);
+$router->delete('/api/expenses/{id}/participants/{participantId}', [ParticipantController::class, 'destroy']);
 
 // Reference data (public)
 

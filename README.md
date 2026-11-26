@@ -98,6 +98,7 @@ docker compose exec -T database sh -c 'mysql -u"$MYSQL_USER" -p"$MYSQL_PASSWORD"
 | --- | --- |
 | `2026_11_09_add_categories.sql` | categories (for a database created before the accounts feature) |
 | `2026_11_12_add_participants_count.sql` | `expenses.participants_count` (keeps existing accounts and expenses) |
+| `2026_11_19_add_expense_participants.sql` | `expense_participants` table, drops `participants_count` (its values are lost) |
 
 The accounts feature (users table, `expenses.user_id`) has no migration: the app
 was not in production yet, so the development database is simply recreated
@@ -117,7 +118,8 @@ Pages (French interface):
 - **Saisie** (`/`): month summary, entry form, last 5 entries.
 - **Récapitulatif** (`/recap`): table of every expense with the "Validée"
   checkbox, edit and delete; filter tabs *Toutes / À valider / Validées*,
-  kept in the URL (`/recap?statut=a-valider`).
+  kept in the URL (`/recap?statut=a-valider`). The **Participants** button opens
+  the list of people sharing the expense: their share, a "paid" checkbox, add / remove.
 - **Mon compte** (`/account`), **Connexion** (`/login`), **Créer un compte** (`/register`).
 
 **Language**: the code, comments and documentation are in English; everything
@@ -139,9 +141,12 @@ shown to users (interface, API error messages, category names) is in French.
   `password_hash()`, the password itself is never stored)
 - **expenses**: owner (`user_id`, foreign key, `ON DELETE CASCADE`), label,
   category (foreign key), `category_detail` (free text, required only with the
-  `other` category), amount in cents, `participants_count` (number of people
-  the expense is shared between, 1 to 1000, default 1), date,
-  `is_validated` + `validated_at`
+  `other` category), amount in cents, date, `is_validated` + `validated_at`
+- **expense_participants**: expense (foreign key, `ON DELETE CASCADE`), `name`
+  (first name + initial, unique per expense, case- and accent-insensitive),
+  `has_paid` + `paid_at`. One expense has 0..n participants (0 = not shared).
+  The **share is never stored**: the API computes it (`share_cents`) from the
+  amount and the number of participants, so it is always up to date.
 
 ## Authentication
 
@@ -181,11 +186,29 @@ Routes for a logged-in user (`401` otherwise), on **their own data only**
 | PUT    | `/api/expenses/{id}` | Replace an expense (all fields) | `200`             |
 | DELETE | `/api/expenses/{id}` | Delete an expense            | `204` (empty body)   |
 | PATCH  | `/api/expenses/{id}/validation` | Check / uncheck "validated": `{"is_validated": true}` | `200` |
+| POST   | `/api/expenses/{id}/participants` | Add a person: `{"name": "Marie D."}` | `201` + expense |
+| PATCH  | `/api/expenses/{id}/participants/{participantId}/payment` | Paid / not paid: `{"has_paid": true}` | `200` + expense |
+| DELETE | `/api/expenses/{id}/participants/{participantId}` | Remove a person | `200` + expense |
+
+The participant routes answer with the **whole updated expense**: adding or
+removing someone changes everyone's share.
 
 Request body (POST / PUT):
 
 ```json
-{ "label": "Repas partagé", "category_id": 2, "category_detail": null, "amount_cents": 4250, "participants_count": 25, "spent_at": "2026-11-02" }
+{ "label": "Repas partagé", "category_id": 2, "category_detail": null, "amount_cents": 4250, "spent_at": "2026-11-02", "participants": ["Alice M.", "Bruno T."] }
+```
+
+`participants` is optional and only read by POST (PUT ignores it: participants
+keep their "paid" status and have their own routes).
+
+Each expense is returned with its participants:
+
+```json
+"participants": [
+  { "id": 1, "name": "Alice M.", "has_paid": true, "paid_at": "2026-11-19 10:02:11", "share_cents": 1063 },
+  { "id": 2, "name": "Bruno T.", "has_paid": false, "paid_at": null, "share_cents": 1062 }
+]
 ```
 
 Errors: `400` body is not a JSON object · `401` not logged in ·
@@ -197,9 +220,11 @@ With the `other` category (Autre), `category_detail` is required, e.g.
 `"category_id": 6, "category_detail": "Décoration"`. With any other category,
 `category_detail` is ignored and stored as `null`.
 
-`participants_count` is optional (default `1`). The interface splits the
-amount to the exact cent: 100,00 € for 3 people gives
-`1 × 33,34 € + 2 × 33,33 €` (Euclidean division, see `frontend/src/utils/money.ts`).
+Shares are split to the exact cent with a Euclidean division
+(`total = quotient × n + remainder`): the first `remainder` participants (by id)
+pay 1 cent more, so 42,50 € for 4 people gives `10,63 + 10,63 + 10,62 + 10,62`
+(see `ModelExpense::shares()`, same algorithm as `splitCents()` in
+`frontend/src/utils/money.ts`, used for the live preview in the form).
 
 Amounts are stored and returned in **cents** (`amount_cents`, integer) to
 avoid floating-point rounding errors. A single expense is limited to
@@ -220,6 +245,9 @@ avoid floating-point rounding errors. A single expense is limited to
 - [x] Validation checkbox on expenses
 - [x] Split an expense between several people (exact to the cent)
 - [x] Two pages: "Saisie" (entry form) and "Récapitulatif" (table to validate, filter by status)
+- [x] Named participants of a shared expense, with "paid" status and computed shares
+- [ ] "Reste à encaisser": amount still owed, per person
+- [ ] Excel export (CSV)
 - [ ] Login rate limiting (Redis)
 - [ ] Redis (cache, login rate limiting)
 - [ ] Production deployment (VPS, HTTPS, CI/CD)
