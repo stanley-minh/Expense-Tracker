@@ -46,10 +46,18 @@ function Login() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="card w-full max-w-md bg-base-100 shadow" noValidate>
+    // border-t-accent (not border-accent): colors only the top edge, the gold line
+    <form
+      onSubmit={handleSubmit}
+      className="card w-full max-w-md border-t-4 border-t-accent bg-base-100 shadow"
+      noValidate
+    >
       <div className="card-body">
-        <h1 className="card-title text-2xl">Connexion</h1>
-        <p className="text-sm text-base-content/70">Espace réservé aux comptables de l'église.</p>
+        {/* card-title is a flex container: justify-center centers it, text-center would not */}
+        <h1 className="card-title justify-center text-2xl">Connexion</h1>
+        <p className="text-center text-sm text-base-content/70">
+          Espace réservé aux comptables de l'église.
+        </p>
 
         <TextField
           label="Adresse e-mail"
@@ -67,7 +75,7 @@ function Login() {
         />
 
         {error && (
-          <div role="alert" className="alert alert-error">
+          <div role="alert" className="alert alert-error justify-center text-center">
             {error}
           </div>
         )}

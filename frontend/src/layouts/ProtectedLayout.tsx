@@ -1,5 +1,6 @@
 import { Navigate, Outlet, useLocation } from "react-router";
 import { useAuth } from "../auth/useAuth";
+import MobileDock from "../components/MobileDock";
 import Navbar from "../components/Navbar";
 
 /**
@@ -31,9 +32,11 @@ function ProtectedLayout() {
   }
 
   return (
-    <div className="min-h-screen bg-base-200">
+    // pb-20 on phones: room for the fixed bottom dock, so it never hides the end of a page
+    <div className="min-h-screen bg-base-200 pb-20 md:pb-0">
       <Navbar user={user} />
       <Outlet />
+      <MobileDock />
     </div>
   );
 }

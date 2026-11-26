@@ -16,6 +16,19 @@ interface ExpenseFormProps {
 }
 
 /**
+ * Turns the text of the "Participants" field into a list of names.
+ * Accepts one name per line AND/OR names separated by commas; blank entries are dropped.
+ * Duplicates are kept on purpose: the API rejects them with a clear message.
+ * @example parseNames("Marie D., Paul\n  Léa \n") // ["Marie D.", "Paul", "Léa"]
+ */
+function parseNames(text: string): string[] {
+  return text
+    .split(/[\n,]/) // regular expression: a line break OR a comma
+    .map((name) => name.trim())
+    .filter((name) => name !== "");
+}
+
+/**
  * Form to add OR edit an expense (same fields, same validation).
  *
  * @remarks
@@ -23,6 +36,8 @@ interface ExpenseFormProps {
  * - Create mode (no `expense` prop): POST, then the fields are emptied.
  * - Edit mode (`expense` prop given): fields start with the expense's values, PUT on submit.
  * The "Précisez" field only appears when the "other" category is selected.
+ * The "Participants" field only exists in create mode; afterwards participants are
+ * managed in ParticipantsDialog (to keep their "paid" status).
  * Errors returned by the API (422) are displayed under the matching field.
  * The amount is typed in euros ("12,50") and sent in cents (1250).
  */
@@ -38,8 +53,8 @@ function ExpenseForm({ categories, expense, onSaved, onCancel }: ExpenseFormProp
   /** Amount as typed by the user, in euros ("12,50"). */
   const [amount, setAmount] = useState(expense ? centsToInputValue(expense.amount_cents) : "");
   const [spentAt, setSpentAt] = useState(expense?.spent_at ?? todayIso());
-  /** Number of people, as typed (a string, like every input value). */
-  const [participants, setParticipants] = useState(String(expense?.participants_count ?? 1));
+  /** Participants as typed, one per line or separated by commas (create mode only). */
+  const [participantsText, setParticipantsText] = useState("");
 
   /** Field errors (from the API or from the local amount check). */
   const [errors, setErrors] = useState<ValidationErrors>({});
@@ -57,12 +72,13 @@ function ExpenseForm({ categories, expense, onSaved, onCancel }: ExpenseFormProp
 
   // Live preview of the split, computed at each render from the current inputs.
   // Shown only when the amount is valid and there is more than 1 person.
+  // Create mode: the names typed in the field. Edit mode: participants are managed
+  // in their own dialog, but the preview still shows the new shares if the amount changes.
+  const names = parseNames(participantsText);
   const previewCents = parseEurosToCents(amount);
-  const previewPeople = Number(participants);
+  const previewPeople = isEditing ? expense.participants.length : names.length;
   const sharePreview =
-    previewCents !== null && Number.isInteger(previewPeople) && previewPeople > 1
-      ? describeShares(previewCents, previewPeople)
-      : null;
+    previewCents !== null && previewPeople > 1 ? describeShares(previewCents, previewPeople) : null;
 
   async function handleSubmit(event: React.SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -81,9 +97,9 @@ function ExpenseForm({ categories, expense, onSaved, onCancel }: ExpenseFormProp
       category_id: Number(categoryId), // "" becomes 0: the API answers "Choisissez une catégorie"
       category_detail: isOther ? categoryDetail : null,
       amount_cents: amountCents,
-      // Number("") = 0 and Number("2.5") = 2.5: the API answers 422 with a clear message
-      participants_count: Number(participants),
       spent_at: spentAt,
+      // Only sent on creation: PUT ignores participants (they have their own routes)
+      ...(isEditing ? {} : { participants: names }),
     };
 
     setIsSubmitting(true);
@@ -98,7 +114,7 @@ function ExpenseForm({ categories, expense, onSaved, onCancel }: ExpenseFormProp
         setLabel("");
         setAmount("");
         setCategoryDetail("");
-        setParticipants("1");
+        setParticipantsText("");
       }
     } catch (error) {
       if (error instanceof ValidationError) {
@@ -176,7 +192,7 @@ function ExpenseForm({ categories, expense, onSaved, onCancel }: ExpenseFormProp
           </fieldset>
         )}
 
-        <div className="grid gap-4 sm:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2">
           <fieldset className="fieldset">
             <label className="fieldset-legend" htmlFor={`${idPrefix}-amount`}>
               Montant (€)
@@ -197,34 +213,6 @@ function ExpenseForm({ categories, expense, onSaved, onCancel }: ExpenseFormProp
           </fieldset>
 
           <fieldset className="fieldset">
-            <label className="fieldset-legend" htmlFor={`${idPrefix}-participants`}>
-              Nombre de personnes
-            </label>
-            {/* type="number" is fine here: whole numbers only, no comma issue */}
-            <input
-              id={`${idPrefix}-participants`}
-              type="number"
-              min={1}
-              max={1000}
-              step={1}
-              className={`input w-full ${errors.participants_count ? "input-error" : ""}`}
-              value={participants}
-              onChange={(event) => setParticipants(event.target.value)}
-              aria-invalid={errors.participants_count !== undefined}
-              aria-describedby={sharePreview ? `${idPrefix}-share-preview` : undefined}
-            />
-            {errors.participants_count ? (
-              <p className="label text-error">{errors.participants_count}</p>
-            ) : (
-              sharePreview && (
-                <p id={`${idPrefix}-share-preview`} className="label" aria-live="polite">
-                  Soit {sharePreview}
-                </p>
-              )
-            )}
-          </fieldset>
-
-          <fieldset className="fieldset">
             <label className="fieldset-legend" htmlFor={`${idPrefix}-date`}>
               Date
             </label>
@@ -239,6 +227,44 @@ function ExpenseForm({ categories, expense, onSaved, onCancel }: ExpenseFormProp
             {errors.spent_at && <p className="label text-error">{errors.spent_at}</p>}
           </fieldset>
         </div>
+
+        {isEditing ? (
+          // Edit mode: participants keep their "paid" status, so they are not retyped here
+          expense.participants.length > 0 && (
+            <p className="text-sm text-base-content/70" aria-live="polite">
+              Partagée entre {expense.participants.length} personnes
+              {sharePreview && ` : ${sharePreview}`}. Les participants se gèrent avec le bouton «
+              Participants ».
+            </p>
+          )
+        ) : (
+          <fieldset className="fieldset">
+            <label className="fieldset-legend" htmlFor={`${idPrefix}-participants`}>
+              Participants (facultatif)
+            </label>
+            <textarea
+              id={`${idPrefix}-participants`}
+              className={`textarea w-full ${errors.participants ? "textarea-error" : ""}`}
+              rows={3}
+              value={participantsText}
+              onChange={(event) => setParticipantsText(event.target.value)}
+              placeholder={
+                "Un prénom par ligne, ou séparés par des virgules\nExemple : Marie D., Paul"
+              }
+              aria-invalid={errors.participants !== undefined}
+              aria-describedby={`${idPrefix}-participants-hint`}
+            />
+            {errors.participants ? (
+              <p className="label text-error">{errors.participants}</p>
+            ) : (
+              <p id={`${idPrefix}-participants-hint`} className="label" aria-live="polite">
+                {sharePreview
+                  ? `${names.length} personnes : ${sharePreview}`
+                  : "Laissez vide si la dépense n'est pas partagée. Prénom et initiale suffisent."}
+              </p>
+            )}
+          </fieldset>
+        )}
 
         {formError && (
           <div role="alert" className="alert alert-error">

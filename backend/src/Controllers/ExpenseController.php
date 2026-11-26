@@ -9,6 +9,8 @@ use App\Core\Response;
 use App\Models\ModelCategory;
 use App\Models\ModelExpense;
 use App\Validators\ExpenseValidator;
+use App\Validators\ParticipantValidator;
+use PDOException;
 
 /**
  * Handles the /api/expenses routes (full CRUD + validation).
@@ -64,22 +66,39 @@ final class ExpenseController extends Controller
     }
 
     /**
-     * POST /api/expenses — creates an expense.
+     * POST /api/expenses — creates an expense, optionally with its participants.
      * Body: {"label": "...", "category_id": 1, "category_detail": null, "amount_cents": 1234,
-     *        "participants_count": 1, "spent_at": "YYYY-MM-DD"}
-     * participants_count is optional (default 1 = not shared).
+     *        "spent_at": "YYYY-MM-DD", "participants": ["Marie D.", "Paul"]}
+     * participants is optional (absent or [] = not shared).
      * category_detail is only required (and only kept) for the "other" (Autre) category.
      */
     public function store(): void
     {
         $userId = Auth::requireUserId();
 
-        $data = $this->readValidBody();
+        $data = $this->readValidBody(withParticipants: true);
         if ($data === null) {
             return; // error response already sent
         }
 
-        $id = $this->getModel()->create($data, $userId);
+        $names = $data['participants'];
+        unset($data['participants']);
+
+        try {
+            $id = $this->getModel()->create($data, $userId, $names);
+        } catch (PDOException $e) {
+            // 1062 = MySQL "duplicate entry" on UNIQUE (expense_id, name). The validator
+            // already rejects exact duplicates; this catches names that only differ by
+            // accents ("Léa" / "Lea"), which MySQL's collation treats as equal.
+            if (($e->errorInfo[1] ?? null) === 1062) {
+                Response::json(['errors' => [
+                    'participants' => 'Deux prénoms de la liste sont identiques '
+                        . '(les accents et les majuscules ne comptent pas).',
+                ]], 422);
+                return;
+            }
+            throw $e; // anything else is a real server error (500)
+        }
 
         // 201 + Location: tells the client where the new resource lives
         Response::json(
@@ -168,10 +187,12 @@ final class ExpenseController extends Controller
      * Reads and validates the JSON body shared by store() and update().
      * Sends the 400 / 422 error response itself when something is wrong.
      *
-     * @return array{label: string, category_id: int, category_detail: ?string, amount_cents: int, participants_count: int, spent_at: string}|null
-     *         Clean data, or null if an error response was sent
+     * @param bool $withParticipants true for store(): also validates the optional
+     *                               "participants" list and returns it under that key.
+     *                               update() ignores participants (they have their own routes).
+     * @return array<string, mixed>|null Clean data, or null if an error response was sent
      */
-    private function readValidBody(): ?array
+    private function readValidBody(bool $withParticipants = false): ?array
     {
         $body = Request::json();
         if ($body === null) {
@@ -182,11 +203,22 @@ final class ExpenseController extends Controller
         $categorySlugs = $this->categories->findSlugsById();
 
         $errors = ExpenseValidator::validate($body, $categorySlugs);
+        if ($withParticipants) {
+            $participantsError = ParticipantValidator::validateNames($body['participants'] ?? null);
+            if ($participantsError !== null) {
+                $errors['participants'] = $participantsError;
+            }
+        }
         if ($errors !== []) {
             Response::json(['errors' => $errors], 422);
             return null;
         }
 
-        return ExpenseValidator::clean($body, $categorySlugs);
+        $data = ExpenseValidator::clean($body, $categorySlugs);
+        if ($withParticipants) {
+            $data['participants'] = ParticipantValidator::cleanNames($body['participants'] ?? null);
+        }
+
+        return $data;
     }
 }

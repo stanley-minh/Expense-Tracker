@@ -121,6 +121,37 @@ export function deleteExpense(id: number): Promise<void> {
   return request<void>(`/expenses/${id}`, { method: "DELETE" });
 }
 
+// --- Participants of a shared expense ---
+// Each call returns the WHOLE updated expense: adding or removing someone changes
+// everyone's share, so the caller just replaces the expense in its list.
+
+/** POST /api/expenses/{id}/participants */
+export function addParticipant(expenseId: number, name: string): Promise<Expense> {
+  return request<Expense>(`/expenses/${expenseId}/participants`, {
+    method: "POST",
+    body: JSON.stringify({ name }),
+  });
+}
+
+/** PATCH /api/expenses/{id}/participants/{participantId}/payment */
+export function setParticipantPaid(
+  expenseId: number,
+  participantId: number,
+  hasPaid: boolean,
+): Promise<Expense> {
+  return request<Expense>(`/expenses/${expenseId}/participants/${participantId}/payment`, {
+    method: "PATCH",
+    body: JSON.stringify({ has_paid: hasPaid }),
+  });
+}
+
+/** DELETE /api/expenses/{id}/participants/{participantId} */
+export function removeParticipant(expenseId: number, participantId: number): Promise<Expense> {
+  return request<Expense>(`/expenses/${expenseId}/participants/${participantId}`, {
+    method: "DELETE",
+  });
+}
+
 // --- Authentication and account ---
 
 /** POST /api/auth/register — creates the account and logs the user in. */
