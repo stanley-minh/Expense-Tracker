@@ -1,4 +1,8 @@
 import { Link, NavLink, useNavigate } from "react-router";
+// Imported (not referenced as "/logo.webp"): Vite gives the file a hashed name
+// (logo-elohim-3f9a1c.webp) so browsers can cache it for a long time and still
+// get the new version the day the logo changes.
+import logo from "../assets/logo-elohim.webp";
 import { useAuth } from "../auth/useAuth";
 import type { User } from "../types/user";
 
@@ -20,10 +24,15 @@ function Navbar({ user }: { user: User }) {
   }
 
   return (
-    <header className="navbar bg-base-100 px-4 shadow-sm">
+    // Gold line under the bar: the gold of the logo, as a brand touch on every page
+    <header className="navbar border-b-2 border-accent bg-base-100 px-4 shadow-sm">
       <div className="flex flex-1 items-center gap-2">
-        <Link to="/" className="mr-2 text-lg font-bold text-primary">
-          Gestion des dépenses
+        <Link to="/" className="mr-2 flex items-center gap-2 text-lg font-bold text-primary">
+          {/* width/height = real ratio (320x256): the browser reserves the space before
+              the image loads, so the bar does not jump (no layout shift) */}
+          <img src={logo} alt="ELOHIM" width={50} height={40} className="h-10 w-auto" />
+          {/* Phones: logo only, the text would push "Se déconnecter" off the bar */}
+          <span className="hidden sm:inline">Gestion des dépenses</span>
         </Link>
         {/* NavLink: knows whether its page is the current one (isActive) to highlight it.
             "end" on "/": otherwise "/" would also be active on /recap (every URL starts with /) */}

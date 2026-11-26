@@ -57,7 +57,12 @@ function Register() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="card w-full max-w-md bg-base-100 shadow" noValidate>
+    // Gold line on top: same card as the login page
+    <form
+      onSubmit={handleSubmit}
+      className="card w-full max-w-md border-t-4 border-t-accent bg-base-100 shadow"
+      noValidate
+    >
       <div className="card-body">
         <h1 className="card-title justify-center text-2xl">Créer un compte</h1>
 

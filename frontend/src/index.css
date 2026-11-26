@@ -11,36 +11,147 @@
 }
 
 /*
- * Brand colors: the built-in "light" and "dark" themes are kept, only their
- * colors are overridden (same theme name = customization, not a new theme).
- * Calm palette for a church: slate blue (primary), sage green (secondary),
- * warm amber (accent). Colors are written in OKLCH (lightness, chroma, hue):
- * changing only the lightness keeps the same hue, handy for the dark variant.
+ * Brand colors, taken from the ELOHIM logo: the built-in "light" and "dark"
+ * themes are kept, only their colors are overridden (same theme name =
+ * customization, not a new theme).
+ *
+ * Gold of the logo: oklch(75% 0.134 87) = #d3a838. No blue: the globe of the
+ * logo is the only blue touch. Palette = gold + charcoal + ivory.
+ * - primary   = old gold (buttons, links, active tab). The bright gold is only
+ *               2.2:1 on white, unreadable as text: light uses a darker gold
+ *               (48% lightness), dark uses the bright gold (charcoal background).
+ * - accent    = bright gold of the logo (brand touches: navbar line)
+ * - secondary = light gold, neutral = charcoal (not used yet, ready for later)
+ * - base-*    = ivory / charcoal surfaces, slightly warm (hue 75-85, low chroma)
+ *
+ * Colors are written in OKLCH (lightness, chroma, hue): changing only the
+ * lightness keeps the same hue, handy for the dark variant.
+ *
+ * Every text/background pair is checked against WCAG AA (contrast >= 4.5:1).
+ * The default daisyUI error/success/warning colors failed as text on white
+ * (2.9:1, 2.0:1, 1.8:1): the light theme darkens them, with light text on top.
+ * Warning is pushed toward orange (hue 45) so it is not mistaken for the gold
+ * primary; the dark default warning (yellow, hue 84) was almost the same gold.
  */
 @plugin "daisyui/theme" {
   name: "light";
   default: true;
   prefersdark: false;
   color-scheme: light;
-  --color-primary: oklch(47% 0.09 250);
-  --color-primary-content: oklch(98% 0.01 250);
-  --color-secondary: oklch(58% 0.07 160);
-  --color-secondary-content: oklch(98% 0.01 160);
-  --color-accent: oklch(72% 0.13 75);
-  --color-accent-content: oklch(25% 0.05 75);
+  --color-base-100: oklch(99.5% 0.003 85);
+  --color-base-200: oklch(96.5% 0.006 85);
+  --color-base-300: oklch(91% 0.01 85);
+  --color-base-content: oklch(20% 0.012 70);
+  --color-primary: oklch(48% 0.1 80);
+  --color-primary-content: oklch(98% 0.01 90);
+  --color-secondary: oklch(84% 0.106 92);
+  --color-secondary-content: oklch(20% 0.012 70);
+  --color-accent: oklch(75% 0.134 87);
+  --color-accent-content: oklch(20% 0.012 70);
+  --color-neutral: oklch(20% 0.012 70);
+  --color-neutral-content: oklch(96% 0.01 90);
+  --color-error: oklch(52% 0.19 25);
+  --color-error-content: oklch(98% 0.01 25);
+  --color-success: oklch(50% 0.12 155);
+  --color-success-content: oklch(98% 0.01 155);
+  --color-warning: oklch(55% 0.16 45);
+  --color-warning-content: oklch(98% 0.01 45);
+
+  /*
+   * Shapes, read by every daisyUI component (no hard-coded rounded-* in the app):
+   * - radius-field: buttons, inputs, selects | radius-box: cards, dialogs, alerts
+   * - radius-selector: badges, checkboxes, toggles
+   * - size-field: control height = size-field x 10 = 2.75rem = 44px, the minimum
+   *   touch target recommended by Apple (the app is mostly used on phones).
+   * Same values in the dark theme: shapes must not change with the colors.
+   */
+  --radius-selector: 1rem;
+  --radius-field: 0.75rem;
+  --radius-box: 1rem;
+  --size-field: 0.275rem;
 }
 
+/* Dark: charcoal surfaces, like the logo on a dark background (gold stands out) */
 @plugin "daisyui/theme" {
   name: "dark";
   default: false;
   prefersdark: true;
   color-scheme: dark;
-  --color-primary: oklch(72% 0.09 250);
-  --color-primary-content: oklch(20% 0.03 250);
-  --color-secondary: oklch(72% 0.07 160);
-  --color-secondary-content: oklch(20% 0.03 160);
-  --color-accent: oklch(78% 0.12 75);
-  --color-accent-content: oklch(22% 0.05 75);
+  --color-base-100: oklch(25% 0.006 75);
+  --color-base-200: oklch(21% 0.005 75);
+  --color-base-300: oklch(17% 0.004 75);
+  --color-base-content: oklch(93% 0.008 85);
+  --color-primary: oklch(78% 0.13 85);
+  --color-primary-content: oklch(20% 0.01 70);
+  --color-secondary: oklch(65% 0.1 75);
+  --color-secondary-content: oklch(20% 0.01 70);
+  --color-accent: oklch(82% 0.12 90);
+  --color-accent-content: oklch(20% 0.01 70);
+  --color-neutral: oklch(15% 0.005 75);
+  --color-neutral-content: oklch(92% 0.008 85);
+  --color-warning: oklch(72% 0.17 45);
+  --color-warning-content: oklch(20% 0.05 45);
+
+  /* Shapes: same as the light theme (see comment there) */
+  --radius-selector: 1rem;
+  --radius-field: 0.75rem;
+  --radius-box: 1rem;
+  --size-field: 0.275rem;
+}
+
+/*
+ * Login / register: golden halo behind the logo, echoing the glow drawn in the logo.
+ * Attached to the logo block, not to the page: the block moves with the screen
+ * height, so a page gradient placed at a fixed % would miss it on some screens.
+ * accent 18% over base-200 = the mix checked for contrast with the title above it
+ * (5.3:1 light, 5.9:1 dark at the brightest point; minimum 4.5:1).
+ */
+@layer components {
+  .auth-halo {
+    position: relative;
+    /* new stacking context: the ::before at z-index -1 goes behind the logo,
+       but stays above the page background */
+    isolation: isolate;
+  }
+
+  .auth-halo::before {
+    content: "";
+    position: absolute;
+    /* A real circle centered on the logo block (top/left 50% + translate -50%) */
+    top: 50%;
+    left: 50%;
+    translate: -50% -50%;
+    aspect-ratio: 1;
+    /* Diameter follows the screen width: clamp(min, preferred, max).
+       A fixed size looked right in a 420px mockup but tiny on a laptop screen. */
+    width: clamp(32rem, 90vw, 72rem);
+    z-index: -1;
+    /* circle closest-side: round glow that fades out exactly at the edge of the box */
+    background: radial-gradient(
+      circle closest-side,
+      color-mix(in oklab, var(--color-accent) 18%, transparent),
+      transparent
+    );
+    pointer-events: none;
+  }
+}
+
+/*
+ * Entrance of the login page: logo and form rise slightly while appearing.
+ * Only when the user has not asked their system to reduce motion (vestibular
+ * disorders, motion sickness): accessibility, WCAG 2.3.3.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  .auth-enter {
+    animation: auth-enter 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  }
+}
+
+@keyframes auth-enter {
+  from {
+    opacity: 0;
+    transform: translateY(0.75rem);
+  }
 }
 
 /*
